@@ -23,14 +23,14 @@ class WelcomeCog(commands.Cog):
         self.bot = bot
         self.welcome_data = load_data()
 
-    @app_commands.command(name="welcome-setup", description="აყენებს არხს, სადაც გაიგზავნება მისალმების შეტყობინებები.")
-    @app_commands.describe(channel="აირჩიეთ მისალმების არხი.")
+    @app_commands.command(name="welcome-setup", description="Ayenebs Welcome - s")
+    @app_commands.describe(channel="Airchiet misalmebis arkhi.")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def welcome_setup(self, interaction: discord.Interaction, channel: discord.TextChannel):
         guild_id = str(interaction.guild.id)
         self.welcome_data[guild_id] = {"channel_id": channel.id}
         save_data(self.welcome_data)
-        await interaction.response.send_message(f"მისალმების არხი დაყენებულია {channel.mention}-ზე!", ephemeral=True)
+        await interaction.response.send_message(f"Misalmebis arkhi dayenebulia {channel.mention}-ze!", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
@@ -43,7 +43,6 @@ class WelcomeCog(commands.Cog):
         if not channel:
             return
 
-        # --- სურათის შექმნა ---
         try:
             background = Image.open("welcome_background.png").convert("RGBA")
             
@@ -65,24 +64,19 @@ class WelcomeCog(commands.Cog):
             draw.text((500, 350), "WELCOME", fill=(255, 255, 255), font=font_big, anchor="ms")
             draw.text((500, 420), member.name, fill=(255, 255, 255), font=font_small, anchor="ms")
 
-            # --- აი, ახალი ხაზი სერვერის სახელისთვის ---
-            # member.guild.name ავტომატურად იღებს სერვერის სახელს
-            server_name_text = f"სერვერზე {member.guild.name}"
-            draw.text((500, 480), server_name_text, fill=(220, 220, 220), font=font_small, anchor="ms") # ოდნავ ღია ფერით
+            server_name_text = f"serverze {member.guild.name}"
+            draw.text((500, 480), server_name_text, fill=(220, 220, 220), font=font_small, anchor="ms")
 
             final_buffer = io.BytesIO()
             background.save(final_buffer, "PNG")
             final_buffer.seek(0)
             
             file = discord.File(fp=final_buffer, filename="welcome.png")
-            await channel.send(f"სერვერზე შემოგვიერთდა {member.mention}! კეთილი იყოს შენი მობრძანება!", file=file)
+            await channel.send(f"Serverze shemogviertda {member.mention}! Ketili iyos sheni mobrdzaneba!", file=file)
 
-        except FileNotFoundError:
-            print("შეცდომა: welcome_background.png ან ფონტები არ არის ატვირთული GitHub-ზე!")
-            await channel.send(f"სერვერზე შემოგვიერთდა {member.mention}! კეთილი იყოს შენი მობრძანება!")
         except Exception as e:
-            print(f"მოხდა შეცდომა მისალმების სურათის შექმნისას: {e}")
-            await channel.send(f"სერვერზე შემოგვიერთდა {member.mention}! კეთილი იყოს შენი მობრძანება!")
+            print(f"Error creating welcome image: {e}")
+            await channel.send(f"Serverze shemogviertda {member.mention}! Ketili iyos sheni mobrdzaneba!")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(WelcomeCog(bot))
