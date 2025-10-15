@@ -16,10 +16,11 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     await bot.load_extension('welcome_cog')
     await bot.load_extension('autorole_cog')
+    await bot.load_extension('giveaway_cog') 
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s)")
     except Exception as e:
         print(f"Error syncing commands: {e}")
-
+        
 bot.run(BOT_TOKEN)
