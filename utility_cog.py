@@ -50,6 +50,7 @@ class GiveawayView(discord.ui.View):
         else:
             await interaction.response.send_message("შენ უკვე მონაწილეობ", ephemeral=True)
 
+# --- აქ იწყება მთავარი კლასი ---
 class UtilityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -60,23 +61,22 @@ class UtilityCog(commands.Cog):
 
     # --- გამართული Clear ბრძანება ---
     @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს")
-    @app_commands.describe(amount="რაოდენობა (მაქს: 100)")
+    @app_commands.describe(amount="რაოდენობა (მაქს 100)")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def clear(self, interaction: discord.Interaction, amount: int):
         if amount > 100:
-            await interaction.response.send_message("100-ზე მეტის წაშლა არ შემიძლია", ephemeral=True)
+            await interaction.response.send_message("100ზე მეტის წაშლა არ შემიძლია", ephemeral=True)
             return
-        
-        await interaction.response.defer(ephemeral=True) # ბოტს ვაძლევთ დროს ფიქრისთვის
+        await interaction.response.defer(ephemeral=True)
         deleted_messages = await interaction.channel.purge(limit=amount)
-        await interaction.followup.send(f"წარმატებით წაიშალა {len(deleted_messages)} შეტყობინება.")
+        await interaction.followup.send(f"წარმატებით წაიშალა {len(deleted_messages)} შეტყობინება")
 
     # --- გამართული Giveaway ბრძანება ---
     @app_commands.command(name="giveaway", description="ქმნის ახალ გათამაშებას")
     @app_commands.describe(
-        duration="რამდენი ხანი (მაგ: 10m, 1h 30m, 2d)",
-        prize="რა თამაშდება?",
-        winners="გამარჯვებულის რაოდენობა (default: 1)"
+        duration="რამდენი ხანი (მაგ 10m 1h 30m 2d)",
+        prize="რა თამაშდება",
+        winners="გამარჯვებულის რაოდენობა (default 1)"
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def start_giveaway(self, interaction: discord.Interaction, duration: str, prize: str, winners: int = 1):
@@ -116,7 +116,7 @@ class UtilityCog(commands.Cog):
                 try: msg = await channel.fetch_message(int(msg_id))
                 except discord.NotFound: data['ended'] = True; save_giveaway_data(giveaways); continue
                 participants = data['participants']
-                prize = data.get('prize', 'უცნობი პრიზი') # ეს იყო შეცდომა
+                prize = data.get('prize', 'უცნობი პრიზი')
                 if not participants:
                     winner_text = "არავინ მიიღო მონაწილეობა"
                     winners_list = []
@@ -138,5 +138,51 @@ class UtilityCog(commands.Cog):
                 data['ended'] = True
                 save_giveaway_data(giveaways)
 
+    # --- ახალი /server ბრძანება იწყება აქ ---
+    @app_commands.command(name="server", description="აჩვენებს ინფორმაციას Lazare's Croud სერვერზე")
+    async def server_info(self, interaction: discord.Interaction):
+        # --- ⚠️ აქ ჩაწერე Lazare's Croud სერვერის ID ---
+        LAZARE_SERVER_ID = 1427644909162074165 # ჩაანაცვლე ნამდვილი ID-ით!
+        # -----------------------------------------------
+        
+        INVITE_LINK = "https://discord.gg/tsNYpPaKkS" # შენი მოწვევის ლინკი
+        
+        guild = self.bot.get_guild(LAZARE_SERVER_ID)
+        
+        if guild is None:
+            # ეს მოხდება, თუ ბოტი არ არის დამატებული Lazare's Croud სერვერზე
+            await interaction.response.send_message("შეცდომა სერვერის ინფორმაციის მოძიებისას!", ephemeral=True)
+            return
+            
+        owner = guild.owner # ვიღებთ სერვერის მფლობელს
+        member_count = guild.member_count # ვიღებთ წევრების რაოდენობას
+
+        embed = discord.Embed(
+            title=guild.name, # სერვერის სახელი
+            description="""
+            **ეს არის საუკეთესო ქართული ქომუნითი!**
+            აქ შეგიძლია გაერთო იპოვო მეგობრები
+            ითამაშო თამაშები და უბრალოდ დრო გაატარო
+            
+            შემოგვიერთდი!
+            """,
+            color=discord.Color.blue() # შეგიძლია ფერი შეცვალო
+        )
+        
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url) # სერვერის იკონკა
+            
+        # ვამატებთ ინფორმაციას ველებად
+        embed.add_field(name="👑 მფლობელი", value=owner.mention if owner else "უცნობია", inline=True)
+        embed.add_field(name="👥 წევრები", value=str(member_count), inline=True)
+        embed.add_field(name="🔗 მოსაწვევი ლინკი", value=f"[დააჭირე აქ]({INVITE_LINK})", inline=False)
+        
+        embed.set_footer(text="გელოდებით!")
+        
+        await interaction.response.send_message(embed=embed)
+
+# --- მთავრდება /server ბრძანება ---
+
+# ეს ფუნქცია საჭიროა, რომ ბოტმა ეს ფაილი ჩატვირთოს
 async def setup(bot: commands.Bot):
     await bot.add_cog(UtilityCog(bot))
