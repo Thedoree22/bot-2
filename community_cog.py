@@ -48,6 +48,7 @@ class CommunityCog(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         guild_id = str(member.guild.id)
+        # --- როლის მინიჭება (უცვლელი) ---
         autorole_data = load_data(AUTOROLE_DB)
         if guild_id in autorole_data:
             role_id = autorole_data[guild_id].get("role_id")
@@ -56,17 +57,20 @@ class CommunityCog(commands.Cog):
                 try: await member.add_roles(role)
                 except Exception as e: print(f"Error adding role: {e}")
 
+        # --- ახალი Welcome სურათის ლოგიკა (იასამნისფერი + ვარსკვლავები) ---
         welcome_data = load_data(WELCOME_DB)
         if guild_id in welcome_data:
             channel_id = welcome_data[guild_id].get("channel_id")
             channel = member.guild.get_channel(channel_id)
             if channel:
                 try:
-                    W, H = (1000, 400)
+                    W, H = (1000, 400) # სურათის ზომა
+
+                    # ვქმნით ფონს - იასამნისფერ-შავი გრადიენტი
                     img = Image.new("RGBA", (W, H))
                     draw = ImageDraw.Draw(img)
-                    start_color = (random.randint(0, 50), random.randint(0, 50), random.randint(0, 50))
-                    end_color = (random.randint(0, 20), random.randint(0, 20), random.randint(0, 20))
+                    start_color = (40, 0, 80)  # მუქი იასამნისფერი
+                    end_color = (0, 0, 0)      # შავი
                     for i in range(H):
                         ratio = i / H
                         r = int(start_color[0] * (1 - ratio) + end_color[0] * ratio)
@@ -74,38 +78,62 @@ class CommunityCog(commands.Cog):
                         b = int(start_color[2] * (1 - ratio) + end_color[2] * ratio)
                         draw.line([(0, i), (W, i)], fill=(r, g, b))
 
+                    # ვამატებთ შემთხვევით ვარსკვლავებს
+                    star_color = (255, 255, 255, 150) # თეთრი, ოდნავ გამჭვირვალე
+                    for _ in range(100): # 100 ვარსკვლავი
+                        x = random.randint(0, W)
+                        y = random.randint(0, H)
+                        size = random.randint(1, 3) # პატარა ვარსკვლავები
+                        draw.ellipse([(x, y), (x+size, y+size)], fill=star_color)
+
+                    # მომხმარებლის ავატარის ჩამოტვირთვა
                     avatar_url = member.avatar.url
                     response = requests.get(avatar_url)
                     avatar_image = Image.open(io.BytesIO(response.content)).convert("RGBA")
+
+                    # ავატარის ზომის შეცვლა და წრედ გადაქცევა
                     AVATAR_SIZE = 220
                     avatar_image = avatar_image.resize((AVATAR_SIZE, AVATAR_SIZE))
                     mask = Image.new("L", (AVATAR_SIZE, AVATAR_SIZE), 0)
                     draw_mask = ImageDraw.Draw(mask)
                     draw_mask.ellipse((0, 0, AVATAR_SIZE, AVATAR_SIZE), fill=255)
-                    avatar_pos = ((W // 2) - (AVATAR_SIZE // 2) - 150, (H // 2) - (AVATAR_SIZE // 2))
+
+                    # ავატარის განთავსება მარცხნივ
+                    avatar_pos = (50, (H // 2) - (AVATAR_SIZE // 2))
                     img.paste(avatar_image, avatar_pos, mask)
 
+                    # ტექსტის დამატება (მარჯვნივ)
                     draw = ImageDraw.Draw(img)
                     try:
                         font_big = ImageFont.truetype("Poppins-Bold.ttf", 70)
                         font_small = ImageFont.truetype("Poppins-Regular.ttf", 40)
                         font_server = ImageFont.truetype("Poppins-Regular.ttf", 30)
                     except IOError:
-                         font_big = ImageFont.load_default()
-                         font_small = ImageFont.load_default()
-                         font_server = ImageFont.load_default()
+                         print("გაფრთხილება: Poppins ფონტები ვერ მოიძებნა! ვიყენებ დეფოლტს.")
+                         font_big = ImageFont.truetype("arial.ttf", 70) # ვცდილობთ Arial-ს
+                         font_small = ImageFont.truetype("arial.ttf", 40)
+                         font_server = ImageFont.truetype("arial.ttf", 30)
+                         # თუ Arial-იც არ არის, Pillow გამოიყენებს თავის ჩაშენებულს
 
-                    text_x = avatar_pos[0] + AVATAR_SIZE + 50
+                    text_x = avatar_pos[0] + AVATAR_SIZE + 50 # ტექსტის X კოორდინატი (ავატარის მარჯვნივ)
+                    
+                    # Welcome ტექსტი
                     draw.text((text_x, H // 2 - 60), "მოგესალმებით", fill=(255, 255, 255), font=font_big)
+                    
+                    # მომხმარებლის სახელი
                     user_name = member.name
                     if len(user_name) > 15: user_name = user_name[:12] + "..."
                     draw.text((text_x, H // 2 + 20), user_name, fill=(200, 200, 200), font=font_small)
+                    
+                    # სერვერის სახელი
                     server_name_text = f"{member.guild.name}-ზე"
                     draw.text((text_x, H // 2 + 70), server_name_text, fill=(150, 150, 150), font=font_server)
 
+                    # სურათის შენახვა
                     final_buffer = io.BytesIO()
                     img.save(final_buffer, "PNG")
                     final_buffer.seek(0)
+
                     file = discord.File(fp=final_buffer, filename="welcome.png")
                     await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო", file=file)
                 except Exception as e:
