@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from PIL import Image, ImageDraw, ImageFont, ImageFilter # ImageFilter დავამატეთ Glow-სთვის
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 import io
 import random
@@ -29,9 +29,7 @@ class CommunityCog(commands.Cog):
     @app_commands.describe(channel="აირჩიე არხი სადაც მოხდება მისალმება")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def welcome_setup(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        data = load_data(WELCOME_DB)
-        data[str(interaction.guild.id)] = {"channel_id": channel.id}
-        save_data(data, WELCOME_DB)
+        data = load_data(WELCOME_DB); data[str(interaction.guild.id)] = {"channel_id": channel.id}; save_data(data, WELCOME_DB)
         await interaction.response.send_message(f"მისალმების არხი არის {channel.mention}", ephemeral=True)
 
     # --- AutoRole Setup (უცვლელი) ---
@@ -40,25 +38,18 @@ class CommunityCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_roles=True)
     async def autorole_setup(self, interaction: discord.Interaction, role: discord.Role):
         if interaction.guild.me.top_role <= role:
-            await interaction.response.send_message("მე არ შემიძლია ამ როლის მინიჭება მიუთითე ჩემს როლზე დაბალი როლი", ephemeral=True)
-            return
-        data = load_data(AUTOROLE_DB)
-        data[str(interaction.guild.id)] = {"role_id": role.id}
-        save_data(data, AUTOROLE_DB)
+            await interaction.response.send_message("მე არ შემიძლია ამ როლის მინიჭება მიუთითე ჩემს როლზე დაბალი როლი", ephemeral=True); return
+        data = load_data(AUTOROLE_DB); data[str(interaction.guild.id)] = {"role_id": role.id}; save_data(data, AUTOROLE_DB)
         await interaction.response.send_message(f"ავტო როლი არის **{role.name}**", ephemeral=True)
 
-    # --- ტექსტის დახატვის დამხმარე ფუნქცია Glow ეფექტით ---
-    def draw_text_with_glow(self, draw, xy, text, font, fill_color, glow_color=(255, 255, 255), glow_radius=3):
+    # --- ტექსტის დახატვის დამხმარე ფუნქცია Shadow ეფექტით ---
+    def draw_text_with_shadow(self, draw, xy, text, font, fill_color, shadow_color=(0, 0, 0, 150), shadow_offset=(2, 2)):
         x, y = xy
-        # ვხატავთ "ჩრდილს" (Glow) რამდენჯერმე ოდნავ გადაწეულს
-        shadow_offset = glow_radius // 2 + 1
-        draw.text((x-shadow_offset, y-shadow_offset), text, font=font, fill=glow_color)
-        draw.text((x+shadow_offset, y-shadow_offset), text, font=font, fill=glow_color)
-        draw.text((x-shadow_offset, y+shadow_offset), text, font=font, fill=glow_color)
-        draw.text((x+shadow_offset, y+shadow_offset), text, font=font, fill=glow_color)
+        sx, sy = shadow_offset
+        # ვხატავთ ჩრდილს
+        draw.text((x + sx, y + sy), text, font=font, fill=shadow_color)
         # ვხატავთ მთავარ ტექსტს ზემოდან
         draw.text(xy, text, font=font, fill=fill_color)
-
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
@@ -66,13 +57,12 @@ class CommunityCog(commands.Cog):
         # --- როლის მინიჭება (უცვლელი) ---
         autorole_data = load_data(AUTOROLE_DB)
         if guild_id in autorole_data:
-            role_id = autorole_data[guild_id].get("role_id")
-            role = member.guild.get_role(role_id)
+            role_id = autorole_data[guild_id].get("role_id"); role = member.guild.get_role(role_id)
             if role:
                 try: await member.add_roles(role)
                 except Exception as e: print(f"Error adding role: {e}")
 
-        # --- ახალი Welcome სურათი (Glow ეფექტით და პოზიციით) ---
+        # --- ახალი Welcome სურათი (Shadow ეფექტით და დაბალანსებული ზომებით) ---
         welcome_data = load_data(WELCOME_DB)
         if guild_id in welcome_data:
             channel_id = welcome_data[guild_id].get("channel_id")
@@ -82,8 +72,7 @@ class CommunityCog(commands.Cog):
                     W, H = (1000, 400) # სურათის ზომა
 
                     # ფონი: იასამნისფერ-შავი გრადიენტი + ვარსკვლავები (უცვლელი)
-                    img = Image.new("RGBA", (W, H))
-                    draw = ImageDraw.Draw(img)
+                    img = Image.new("RGBA", (W, H)); draw = ImageDraw.Draw(img)
                     start_color = (40, 0, 80); end_color = (0, 0, 0)
                     for i in range(H):
                         ratio = i / H; r = int(start_color[0]*(1-ratio)+end_color[0]*ratio); g = int(start_color[1]*(1-ratio)+end_color[1]*ratio); b = int(start_color[2]*(1-ratio)+end_color[2]*ratio)
@@ -93,40 +82,47 @@ class CommunityCog(commands.Cog):
                         x=random.randint(0,W); y=random.randint(0,H); size=random.randint(1,3)
                         draw.ellipse([(x,y),(x+size,y+size)], fill=star_color)
 
-                    # ავატარი (უცვლელი)
+                    # ავატარი (ოდნავ პატარა და ცენტრში)
                     avatar_url = member.avatar.url; response = requests.get(avatar_url); avatar_image = Image.open(io.BytesIO(response.content)).convert("RGBA")
-                    AVATAR_SIZE = 200 # ოდნავ დავაპატარავოთ
+                    AVATAR_SIZE = 180 # დავაპატარავოთ კიდევ
                     avatar_image = avatar_image.resize((AVATAR_SIZE, AVATAR_SIZE))
                     mask = Image.new("L", (AVATAR_SIZE, AVATAR_SIZE), 0); draw_mask = ImageDraw.Draw(mask); draw_mask.ellipse((0, 0, AVATAR_SIZE, AVATAR_SIZE), fill=255)
-                    avatar_pos = (70, (H // 2) - (AVATAR_SIZE // 2)) # პოზიცია მარცხნივ
+                    avatar_pos = (80, (H // 2) - (AVATAR_SIZE // 2)) # პოზიცია მარცხნივ
                     img.paste(avatar_image, avatar_pos, mask)
 
-                    # ტექსტის დამატება (ქართული ფონტით, Glow და ახალი პოზიცია)
+                    # ტექსტის დამატება (ქართული ფონტით, Shadow და დაბალანსებული ზომები)
                     draw = ImageDraw.Draw(img)
                     try:
-                        font_regular = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 40) # გავზარდოთ ცოტა
-                        font_bold = ImageFont.truetype("NotoSansGeorgian-Bold.ttf", 55) # გავზარდოთ ცოტა
-                        font_server = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 35) # გავზარდოთ ცოტა
+                        # დავაბალანსოთ ფონტის ზომები
+                        font_regular = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 40)
+                        font_bold = ImageFont.truetype("NotoSansGeorgian-Bold.ttf", 55) # სახელი ყველაზე დიდი
+                        font_server = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 35)
                     except IOError:
-                        print("შეცდომა: Noto Sans Georgian ფონტები ვერ მოიძებნა!"); return # შევწყვიტოთ თუ ფონტი არაა
+                        print("შეცდომა: Noto Sans Georgian ფონტები ვერ მოიძებნა!"); return
 
-                    text_x = avatar_pos[0] + AVATAR_SIZE + 60 # ტექსტის X კოორდინატი (უფრო მარჯვნივ)
+                    text_x = avatar_pos[0] + AVATAR_SIZE + 60 # ტექსტის X კოორდინატი
 
                     # ტექსტები
                     welcome_text = "მოგესალმებით"
                     user_name = member.name
-                    if len(user_name) > 15: user_name = user_name[:12] + "..."
+                    if len(user_name) > 18: user_name = user_name[:15] + "..." # ცოტა მეტი ადგილი სახელისთვის
                     server_text = f"{member.guild.name} - ში!"
 
-                    # ვათავსებთ ტექსტს ვერტიკალურად ცენტრში (ოდნავ ზემოთ)
-                    current_y = H // 2 - 80 # დავიწყოთ უფრო ზემოდან
+                    # ვათავსებთ ტექსტს ვერტიკალურად ცენტრში, უფრო დაახლოებულად
+                    line_height_multiplier = 1.2 # ხაზებს შორის დაშორება
+                    total_text_height = (font_regular.getbbox(welcome_text)[3] - font_regular.getbbox(welcome_text)[1]) + \
+                                        (font_bold.getbbox(user_name)[3] - font_bold.getbbox(user_name)[1]) + \
+                                        (font_server.getbbox(server_text)[3] - font_server.getbbox(server_text)[1]) + \
+                                        (font_regular.size * line_height_multiplier * 0.5) * 2 # დაშორებები
 
-                    # ვიყენებთ ახალ ფუნქციას Glow ეფექტით
-                    self.draw_text_with_glow(draw, (text_x, current_y), welcome_text, font_regular, fill_color=(200, 200, 200))
-                    current_y += 60 # დაშორება
-                    self.draw_text_with_glow(draw, (text_x, current_y), user_name, font_bold, fill_color=(255, 255, 255))
-                    current_y += 60 # დაშორება
-                    self.draw_text_with_glow(draw, (text_x, current_y), server_text, font_server, fill_color=(170, 170, 170)) # სერვერის სახელი უფრო მუქად
+                    current_y = (H // 2) - (total_text_height // 2)
+
+                    # ვიყენებთ ახალ ფუნქციას Shadow ეფექტით
+                    self.draw_text_with_shadow(draw, (text_x, current_y), welcome_text, font_regular, fill_color=(220, 220, 220)) # ოდნავ ღია
+                    current_y += int(font_regular.size * line_height_multiplier)
+                    self.draw_text_with_shadow(draw, (text_x, current_y), user_name, font_bold, fill_color=(255, 255, 255)) # თეთრი
+                    current_y += int(font_bold.size * line_height_multiplier)
+                    self.draw_text_with_shadow(draw, (text_x, current_y), server_text, font_server, fill_color=(180, 180, 180)) # ოდნავ მუქი
 
                     # სურათის შენახვა
                     final_buffer = io.BytesIO()
