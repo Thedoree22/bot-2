@@ -3,9 +3,10 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 import io
+import random
 
 WELCOME_DB = "welcome_data.json"
 AUTOROLE_DB = "autorole_data.json"
@@ -61,29 +62,55 @@ class CommunityCog(commands.Cog):
             channel = member.guild.get_channel(channel_id)
             if channel:
                 try:
-                    background = Image.open("welcome_background.png").convert("RGBA")
+                    W, H = (1000, 400)
+                    img = Image.new("RGBA", (W, H))
+                    draw = ImageDraw.Draw(img)
+                    start_color = (random.randint(0, 50), random.randint(0, 50), random.randint(0, 50))
+                    end_color = (random.randint(0, 20), random.randint(0, 20), random.randint(0, 20))
+                    for i in range(H):
+                        ratio = i / H
+                        r = int(start_color[0] * (1 - ratio) + end_color[0] * ratio)
+                        g = int(start_color[1] * (1 - ratio) + end_color[1] * ratio)
+                        b = int(start_color[2] * (1 - ratio) + end_color[2] * ratio)
+                        draw.line([(0, i), (W, i)], fill=(r, g, b))
+
                     avatar_url = member.avatar.url
                     response = requests.get(avatar_url)
                     avatar_image = Image.open(io.BytesIO(response.content)).convert("RGBA")
-                    avatar_image = avatar_image.resize((250, 250))
-                    mask = Image.new("L", (250, 250), 0)
-                    draw = ImageDraw.Draw(mask)
-                    draw.ellipse((0, 0, 250, 250), fill=255)
-                    background.paste(avatar_image, (375, 80), mask)
-                    draw = ImageDraw.Draw(background)
-                    font_big = ImageFont.truetype("Poppins-Bold.ttf", 60)
-                    font_small = ImageFont.truetype("Poppins-Regular.ttf", 40)
-                    draw.text((500, 350), "მოგესალმებით", fill=(255, 255, 255), font=font_big, anchor="ms")
-                    draw.text((500, 420), member.name, fill=(255, 255, 255), font=font_small, anchor="ms")
-                    server_name_text = f"სერვერზე {member.guild.name}"
-                    draw.text((500, 480), server_name_text, fill=(220, 220, 220), font=font_small, anchor="ms")
+                    AVATAR_SIZE = 220
+                    avatar_image = avatar_image.resize((AVATAR_SIZE, AVATAR_SIZE))
+                    mask = Image.new("L", (AVATAR_SIZE, AVATAR_SIZE), 0)
+                    draw_mask = ImageDraw.Draw(mask)
+                    draw_mask.ellipse((0, 0, AVATAR_SIZE, AVATAR_SIZE), fill=255)
+                    avatar_pos = ((W // 2) - (AVATAR_SIZE // 2) - 150, (H // 2) - (AVATAR_SIZE // 2))
+                    img.paste(avatar_image, avatar_pos, mask)
+
+                    draw = ImageDraw.Draw(img)
+                    try:
+                        font_big = ImageFont.truetype("Poppins-Bold.ttf", 70)
+                        font_small = ImageFont.truetype("Poppins-Regular.ttf", 40)
+                        font_server = ImageFont.truetype("Poppins-Regular.ttf", 30)
+                    except IOError:
+                         font_big = ImageFont.load_default()
+                         font_small = ImageFont.load_default()
+                         font_server = ImageFont.load_default()
+
+                    text_x = avatar_pos[0] + AVATAR_SIZE + 50
+                    draw.text((text_x, H // 2 - 60), "მოგესალმებით", fill=(255, 255, 255), font=font_big)
+                    user_name = member.name
+                    if len(user_name) > 15: user_name = user_name[:12] + "..."
+                    draw.text((text_x, H // 2 + 20), user_name, fill=(200, 200, 200), font=font_small)
+                    server_name_text = f"{member.guild.name}-ზე"
+                    draw.text((text_x, H // 2 + 70), server_name_text, fill=(150, 150, 150), font=font_server)
+
                     final_buffer = io.BytesIO()
-                    background.save(final_buffer, "PNG")
+                    img.save(final_buffer, "PNG")
                     final_buffer.seek(0)
                     file = discord.File(fp=final_buffer, filename="welcome.png")
                     await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო", file=file)
                 except Exception as e:
                     print(f"Error creating welcome image: {e}")
+                    await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო")
 
 async def setup(bot: commands.Cog):
     await bot.add_cog(CommunityCog(bot))
