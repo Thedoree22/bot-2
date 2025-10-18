@@ -24,6 +24,7 @@ class CommunityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    # --- Welcome Setup (უცვლელი) ---
     @app_commands.command(name="welcome", description="აყენებს მისალმების არხს")
     @app_commands.describe(channel="აირჩიე არხი სადაც მოხდება მისალმება")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -33,6 +34,7 @@ class CommunityCog(commands.Cog):
         save_data(data, WELCOME_DB)
         await interaction.response.send_message(f"მისალმების არხი არის {channel.mention}", ephemeral=True)
 
+    # --- AutoRole Setup (უცვლელი) ---
     @app_commands.command(name="autorole", description="აყენებს როლს რომელიც ავტომატურად მიენიჭება")
     @app_commands.describe(role="აირჩიე როლი რომ მიენიჭოს")
     @app_commands.checks.has_permissions(manage_roles=True)
@@ -57,7 +59,7 @@ class CommunityCog(commands.Cog):
                 try: await member.add_roles(role)
                 except Exception as e: print(f"Error adding role: {e}")
 
-        # --- ახალი Welcome სურათის ლოგიკა (იასამნისფერი + ვარსკვლავები) ---
+        # --- ახალი Welcome სურათი (ქართული ფონტით და ტექსტით) ---
         welcome_data = load_data(WELCOME_DB)
         if guild_id in welcome_data:
             channel_id = welcome_data[guild_id].get("channel_id")
@@ -66,68 +68,62 @@ class CommunityCog(commands.Cog):
                 try:
                     W, H = (1000, 400) # სურათის ზომა
 
-                    # ვქმნით ფონს - იასამნისფერ-შავი გრადიენტი
+                    # ფონი: იასამნისფერ-შავი გრადიენტი + ვარსკვლავები (უცვლელი)
                     img = Image.new("RGBA", (W, H))
                     draw = ImageDraw.Draw(img)
-                    start_color = (40, 0, 80)  # მუქი იასამნისფერი
-                    end_color = (0, 0, 0)      # შავი
+                    start_color = (40, 0, 80); end_color = (0, 0, 0)
                     for i in range(H):
                         ratio = i / H
-                        r = int(start_color[0] * (1 - ratio) + end_color[0] * ratio)
-                        g = int(start_color[1] * (1 - ratio) + end_color[1] * ratio)
-                        b = int(start_color[2] * (1 - ratio) + end_color[2] * ratio)
-                        draw.line([(0, i), (W, i)], fill=(r, g, b))
+                        r = int(start_color[0]*(1-ratio)+end_color[0]*ratio)
+                        g = int(start_color[1]*(1-ratio)+end_color[1]*ratio)
+                        b = int(start_color[2]*(1-ratio)+end_color[2]*ratio)
+                        draw.line([(0,i),(W,i)], fill=(r,g,b))
+                    star_color = (255, 255, 255, 150)
+                    for _ in range(100):
+                        x=random.randint(0,W); y=random.randint(0,H); size=random.randint(1,3)
+                        draw.ellipse([(x,y),(x+size,y+size)], fill=star_color)
 
-                    # ვამატებთ შემთხვევით ვარსკვლავებს
-                    star_color = (255, 255, 255, 150) # თეთრი, ოდნავ გამჭვირვალე
-                    for _ in range(100): # 100 ვარსკვლავი
-                        x = random.randint(0, W)
-                        y = random.randint(0, H)
-                        size = random.randint(1, 3) # პატარა ვარსკვლავები
-                        draw.ellipse([(x, y), (x+size, y+size)], fill=star_color)
-
-                    # მომხმარებლის ავატარის ჩამოტვირთვა
+                    # ავატარი (უცვლელი)
                     avatar_url = member.avatar.url
                     response = requests.get(avatar_url)
                     avatar_image = Image.open(io.BytesIO(response.content)).convert("RGBA")
-
-                    # ავატარის ზომის შეცვლა და წრედ გადაქცევა
                     AVATAR_SIZE = 220
                     avatar_image = avatar_image.resize((AVATAR_SIZE, AVATAR_SIZE))
                     mask = Image.new("L", (AVATAR_SIZE, AVATAR_SIZE), 0)
                     draw_mask = ImageDraw.Draw(mask)
                     draw_mask.ellipse((0, 0, AVATAR_SIZE, AVATAR_SIZE), fill=255)
-
-                    # ავატარის განთავსება მარცხნივ
                     avatar_pos = (50, (H // 2) - (AVATAR_SIZE // 2))
                     img.paste(avatar_image, avatar_pos, mask)
 
-                    # ტექსტის დამატება (მარჯვნივ)
+                    # ტექსტის დამატება (ქართული ფონტით და ახალი განლაგებით)
                     draw = ImageDraw.Draw(img)
                     try:
-                        font_big = ImageFont.truetype("Poppins-Bold.ttf", 70)
-                        font_small = ImageFont.truetype("Poppins-Regular.ttf", 40)
-                        font_server = ImageFont.truetype("Poppins-Regular.ttf", 30)
+                        # ვცდილობთ ჩავტვირთოთ ქართული ფონტები
+                        font_regular = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 45)
+                        font_bold = ImageFont.truetype("NotoSansGeorgian-Bold.ttf", 50) # სახელისთვის
                     except IOError:
-                         print("გაფრთხილება: Poppins ფონტები ვერ მოიძებნა! ვიყენებ დეფოლტს.")
-                         font_big = ImageFont.truetype("arial.ttf", 70) # ვცდილობთ Arial-ს
-                         font_small = ImageFont.truetype("arial.ttf", 40)
-                         font_server = ImageFont.truetype("arial.ttf", 30)
-                         # თუ Arial-იც არ არის, Pillow გამოიყენებს თავის ჩაშენებულს
+                        print("შეცდომა: Noto Sans Georgian ფონტები ვერ მოიძებნა GitHub-ზე! ატვირთე .ttf ფაილები.")
+                        # ვიყენებთ დეფოლტს, რომელიც ქართულს ვერ დაწერს სწორად
+                        font_regular = ImageFont.truetype("arial.ttf", 45) if os.path.exists("arial.ttf") else ImageFont.load_default()
+                        font_bold = ImageFont.truetype("arialbd.ttf", 50) if os.path.exists("arialbd.ttf") else ImageFont.load_default()
 
-                    text_x = avatar_pos[0] + AVATAR_SIZE + 50 # ტექსტის X კოორდინატი (ავატარის მარჯვნივ)
-                    
-                    # Welcome ტექსტი
-                    draw.text((text_x, H // 2 - 60), "მოგესალმებით", fill=(255, 255, 255), font=font_big)
-                    
-                    # მომხმარებლის სახელი
+
+                    text_x = avatar_pos[0] + AVATAR_SIZE + 50 # ტექსტის X კოორდინატი
+
+                    # ვწერთ ტექსტს
+                    welcome_text = "მოგესალმებით"
                     user_name = member.name
-                    if len(user_name) > 15: user_name = user_name[:12] + "..."
-                    draw.text((text_x, H // 2 + 20), user_name, fill=(200, 200, 200), font=font_small)
-                    
-                    # სერვერის სახელი
-                    server_name_text = f"{member.guild.name}-ზე"
-                    draw.text((text_x, H // 2 + 70), server_name_text, fill=(150, 150, 150), font=font_server)
+                    server_text = f"{member.guild.name} - ში!"
+
+                    # ვათავსებთ ტექსტს ვერტიკალურად ცენტრში
+                    total_text_height_approx = 110 # დაახლოებითი სიმაღლე
+                    current_y = (H // 2) - (total_text_height_approx // 2)
+
+                    draw.text((text_x, current_y), welcome_text, fill=(200, 200, 200), font=font_regular)
+                    current_y += 55 # დაშორება
+                    draw.text((text_x, current_y), user_name, fill=(255, 255, 255), font=font_bold)
+                    current_y += 55 # დაშორება
+                    draw.text((text_x, current_y), server_text, fill=(150, 150, 150), font=font_regular)
 
                     # სურათის შენახვა
                     final_buffer = io.BytesIO()
@@ -135,7 +131,7 @@ class CommunityCog(commands.Cog):
                     final_buffer.seek(0)
 
                     file = discord.File(fp=final_buffer, filename="welcome.png")
-                    await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო", file=file)
+                    await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო", file=file) # ეს ტექსტი ცალკე იგზავნება
                 except Exception as e:
                     print(f"Error creating welcome image: {e}")
                     await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო")
