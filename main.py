@@ -22,8 +22,9 @@ async def on_ready():
     # --- ყველა ფუნქციის (Cogs) ჩატვირთვა ---
     cogs_to_load = [
         'utility_cog',        # aq aris Clear da Giveaway
-        'community_cog',      # aq aris Welcome da Auto-Role
-        'youtube_cog'         # aq aris YouTube shetyobinebebi
+        'community_cog',      # aq aris Welcome da Auto-Role (ახალი დიზაინით)
+        'youtube_cog',        # aq aris YouTube shetyobinebebi
+        'tiktok_cog'          # <--- davamate TikTok
     ]
     
     for cog in cogs_to_load:
