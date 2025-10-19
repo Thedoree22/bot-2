@@ -16,16 +16,15 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"ბოტი ჩაირთო როგორც {bot.user}")
-    print("-" * 30)
-    
-    # --- ყველა ფუნქციის (Cogs) ჩატვირთვა ---
+    # ... (სხვა კოდი) ...
     cogs_to_load = [
-        'utility_cog',        # aq aris Clear da Giveaway
-        'community_cog',      # aq aris Welcome da Auto-Role (ახალი დიზაინით)
-        'youtube_cog',        # aq aris YouTube shetyobinebebi
-        'tiktok_cog'          # <--- davamate TikTok
+        'utility_cog',
+        'community_cog',
+        'youtube_cog',
+        'tiktok_cog', 
+        'music_cog' 
     ]
+    
     
     for cog in cogs_to_load:
         try:
