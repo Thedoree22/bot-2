@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from typing import Optional
 import json
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
