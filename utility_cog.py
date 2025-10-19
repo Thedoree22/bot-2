@@ -6,12 +6,12 @@ import os
 import random
 import datetime
 import re
-from typing import Optional # დავამატეთ Optional userinfo-სთვის
+from typing import Optional
 
 # --- Giveaway მონაცემთა ბაზა ---
 GIVEAWAY_DB = "giveaways.json"
 
-# ...(load_giveaway_data, save_giveaway_data, parse_duration, GiveawayView უცვლელი რჩება)...
+# ...(load_giveaway_data, save_giveaway_data, parse_duration, GiveawayView უცვლელი)...
 def load_giveaway_data():
     if not os.path.exists(GIVEAWAY_DB): return {}
     try:
@@ -99,36 +99,53 @@ class UtilityCog(commands.Cog):
                 view = discord.ui.View(); view.add_item(discord.ui.Button(label="მონაწილეობა", style=discord.ButtonStyle.success, disabled=True))
                 await msg.edit(embed=original_embed, view=view); data['ended'] = True; save_giveaway_data(giveaways)
 
-    # --- ახალი /userinfo ბრძანება ---
+    # --- Userinfo ბრძანება ---
     @app_commands.command(name="userinfo", description="აჩვენებს ინფორმაციას მომხმარებელზე")
-    @app_commands.describe(user="აირჩიე მომხმარებელი (თუ არ აირჩევ, შენსას აჩვენებს)")
+    @app_commands.describe(user="აირჩიე მომხმარებელი (თუ არ აირჩევ შენსას აჩვენებს)")
     async def userinfo(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
-        target_user = user or interaction.user # თუ user არ არის მითითებული, ვიღებთ ბრძანების გამომძახეს
-
-        embed = discord.Embed(
-            title=f"{target_user.name}#{target_user.discriminator}" if target_user.discriminator != '0' else target_user.name,
-            color=target_user.color # იღებს მომხმარებლის როლის ფერს
-        )
-        if target_user.avatar:
-            embed.set_thumbnail(url=target_user.avatar.url)
-
+        target_user = user or interaction.user
+        embed = discord.Embed(title=f"{target_user.name}#{target_user.discriminator}" if target_user.discriminator != '0' else target_user.name, color=target_user.color)
+        if target_user.avatar: embed.set_thumbnail(url=target_user.avatar.url)
         embed.add_field(name="ID", value=target_user.id, inline=False)
         embed.add_field(name="შემოუერთდა სერვერს", value=f"<t:{int(target_user.joined_at.timestamp())}:R>", inline=True)
         embed.add_field(name="ანგარიში შეიქმნა", value=f"<t:{int(target_user.created_at.timestamp())}:R>", inline=True)
-
         roles = [role.mention for role in target_user.roles if role.name != "@everyone"]
-        if roles:
-            embed.add_field(name=f"როლები [{len(roles)}]", value=", ".join(roles) if len(roles) < 10 else f"{len(roles)} როლი", inline=False)
-        else:
-            embed.add_field(name="როლები", value="არ აქვს", inline=False)
-
-        if target_user.top_role.name != "@everyone":
-             embed.add_field(name="უმაღლესი როლი", value=target_user.top_role.mention, inline=True)
-
-        # ვამოწმებთ, მომხმარებელი ბოტია თუ არა
+        if roles: embed.add_field(name=f"როლები [{len(roles)}]", value=", ".join(roles) if len(roles) < 10 else f"{len(roles)} როლი", inline=False)
+        else: embed.add_field(name="როლები", value="არ აქვს", inline=False)
+        if target_user.top_role.name != "@everyone": embed.add_field(name="უმაღლესი როლი", value=target_user.top_role.mention, inline=True)
         embed.add_field(name="ბოტი?", value="კი" if target_user.bot else "არა", inline=True)
-
         await interaction.response.send_message(embed=embed)
+
+    # --- ახალი /join ბრძანება ---
+    @app_commands.command(name="join", description="ბოტი შემოდის შენს ხმოვან არხში")
+    async def join(self, interaction: discord.Interaction):
+        # 1. ვამოწმებთ, არის თუ არა მომხმარებელი ხმოვან არხში
+        if interaction.user.voice and interaction.user.voice.channel:
+            channel = interaction.user.voice.channel
+            # 2. ვამოწმებთ, არის თუ არა ბოტი უკვე ხმოვან არხში ამ სერვერზე
+            if interaction.guild.voice_client:
+                # თუ არის, გადაგვყავს მომხმარებლის არხში
+                await interaction.guild.voice_client.move_to(channel)
+                await interaction.response.send_message(f"გადმოვედი `{channel.name}`-ში.")
+            else:
+                # თუ არ არის, ვუერთდებით მომხმარებლის არხს
+                try:
+                    await channel.connect()
+                    await interaction.response.send_message(f"შემოვედი `{channel.name}`-ში.")
+                except Exception as e:
+                    await interaction.response.send_message(f"ვერ შემოვედი არხში: {e}", ephemeral=True)
+        else:
+            # თუ მომხმარებელი არ არის ხმოვან არხში
+            await interaction.response.send_message("ჯერ ხმოვან არხში უნდა იყო!", ephemeral=True)
+
+    # --- (სურვილისამებრ) დავამატოთ /leave ბრძანებაც ---
+    @app_commands.command(name="leave", description="ბოტი გადის ხმოვანი არხიდან")
+    async def leave(self, interaction: discord.Interaction):
+        if interaction.guild.voice_client:
+            await interaction.guild.voice_client.disconnect()
+            await interaction.response.send_message("გავედი ხმოვანი არხიდან.")
+        else:
+            await interaction.response.send_message("მე ისედაც არ ვარ ხმოვან არხში.", ephemeral=True)
 
 
 async def setup(bot: commands.Cog):
