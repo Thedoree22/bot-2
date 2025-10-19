@@ -10,7 +10,7 @@ if BOT_TOKEN is None:
 # --- ბოტის უფლებები (Intents) ---
 intents = discord.Intents.default()
 intents.members = True       # aucilebelia Welcome da Auto-Role-istvis
-intents.message_content = True 
+intents.message_content = True # საჭირო იყო Counting-ისთვის, მაგრამ დავტოვოთ
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -21,11 +21,10 @@ async def on_ready():
 
     # --- ყველა ფუნქციის (Cogs) ჩატვირთვა ---
     cogs_to_load = [
-        'utility_cog',        # aq aris Clear, Giveaway, Userinfo
-        'community_cog',      # aq aris Welcome da Auto-Role
-        'youtube_cog',        # aq aris YouTube shetyobinebebi
-        'tiktok_cog'          # aq aris TikTok shetyobinebebi
-    
+        'utility_cog',        # Clear, Giveaway, Userinfo
+        'community_cog',      # Welcome, Auto-Role
+        'youtube_cog',        # YouTube notifications
+        'tiktok_cog'          # TikTok notifications
     ]
 
     for cog in cogs_to_load:
@@ -46,26 +45,6 @@ async def on_ready():
 
     print("-" * 30)
 
+# !!! დარწმუნდი, რომ ეს ხაზი იწყება ყველაზე მარცხნიდან !!!
 bot.run(BOT_TOKEN)
-    ]
-    
-    
-    for cog in cogs_to_load:
-        try:
-            await bot.load_extension(cog)
-            print(f"წარმატებით ჩაიტვირთა: {cog}")
-        except Exception as e:
-            print(f"შეცდომა: ვერ ჩაიტვირთა {cog}: {e}")
-
-    print("-" * 30)
-
-    # --- სლეშ ბრძანებების რეგისტრაცია ---
-    try:
-        synced = await bot.tree.sync()
-        print(f"წარმატებით დარეგისტრირდა {len(synced)} ბრძანება.")
-    except Exception as e:
-        print(f"შეცდომა ბრძანებების რეგისტრაციისას: {e}")
-    
-    print("-" * 30)
-
-bot.run(BOT_TOKEN)
+# !!! არანაირი ცარიელი ადგილი ამ ხაზის წინ !!!
