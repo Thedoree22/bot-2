@@ -16,13 +16,37 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    # ... (სხვა კოდი) ...
+    print(f"ბოტი ჩაირთო როგორც {bot.user}")
+    print("-" * 30)
+
+    # --- ყველა ფუნქციის (Cogs) ჩატვირთვა ---
     cogs_to_load = [
-        'utility_cog',
-        'community_cog',
-        'youtube_cog',
-        'tiktok_cog', 
-        'music_cog' 
+        'utility_cog',        # aq aris Clear, Giveaway, Userinfo
+        'community_cog',      # aq aris Welcome da Auto-Role
+        'youtube_cog',        # aq aris YouTube shetyobinebebi
+        'tiktok_cog'          # aq aris TikTok shetyobinebebi
+    
+    ]
+
+    for cog in cogs_to_load:
+        try:
+            await bot.load_extension(cog)
+            print(f"წარმატებით ჩაიტვირთა: {cog}")
+        except Exception as e:
+            print(f"შეცდომა: ვერ ჩაიტვირთა {cog}: {e}")
+
+    print("-" * 30)
+
+    # --- სლეშ ბრძანებების რეგისტრაცია ---
+    try:
+        synced = await bot.tree.sync()
+        print(f"წარმატებით დარეგისტრირდა {len(synced)} ბრძანება.")
+    except Exception as e:
+        print(f"შეცდომა ბრძანებების რეგისტრაციისას: {e}")
+
+    print("-" * 30)
+
+bot.run(BOT_TOKEN)
     ]
     
     
