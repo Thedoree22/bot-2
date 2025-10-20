@@ -8,19 +8,25 @@ import datetime
 import re
 from typing import Optional
 
-# ...(მონაცემთა ბაზის ფაილები და ფუნქციები უცვლელი)...
+# --- მონაცემთა ბაზის ფაილები ---
 GIVEAWAY_DB = "giveaways.json"
 AUTOMESSAGE_DB = "automessage_data.json"
-def load_data(file_path): # ... (კოდი იგივეა) ...
+SMS_LOG_DB = "sms_logs.json" # ახალი ფაილი SMS ლოგებისთვის
+
+# --- მონაცემთა ბაზის ფუნქციები ---
+def load_data(file_path):
     if not os.path.exists(file_path): return {}
     try:
         with open(file_path, "r", encoding='utf-8') as f: return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError): return {}
-def save_data(data, file_path): # ... (კოდი იგივეა) ...
+
+def save_data(data, file_path):
     try:
         with open(file_path, "w", encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"ფაილში შენახვის შეცდომა ({file_path}): {e}")
-def parse_duration(duration_str: str) -> datetime.timedelta: # ... (კოდი იგივეა) ...
+
+# ...(Giveaway ფუნქციები უცვლელი)...
+def parse_duration(duration_str: str) -> datetime.timedelta:
     regex = re.compile(r'(\d+)([smhd])'); parts = regex.findall(duration_str.lower()); delta = datetime.timedelta()
     for amount, unit in parts:
         amount = int(amount);
@@ -29,7 +35,7 @@ def parse_duration(duration_str: str) -> datetime.timedelta: # ... (კოდი
         elif unit == 'h': delta += datetime.timedelta(hours=amount)
         elif unit == 'd': delta += datetime.timedelta(days=amount)
     return delta
-class GiveawayView(discord.ui.View): # ... (კოდი იგივეა) ...
+class GiveawayView(discord.ui.View):
     def __init__(self, giveaway_message_id): super().__init__(timeout=None); self.giveaway_message_id = giveaway_message_id
     @discord.ui.button(label="მონაწილეობა", style=discord.ButtonStyle.success, custom_id="join_giveaway_button")
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -45,13 +51,34 @@ class UtilityCog(commands.Cog):
         self.bot = bot
         if hasattr(self, 'start_giveaway'): self.check_giveaways.start()
         self.send_auto_message.start()
+        # ვტვირთავთ SMS ლოგებს ბოტის ჩართვისას
+        self.sms_logs = load_data(SMS_LOG_DB)
 
     def cog_unload(self):
         if hasattr(self, 'check_giveaways') and self.check_giveaways.is_running(): self.check_giveaways.cancel()
         if self.send_auto_message.is_running(): self.send_auto_message.cancel()
 
-    # --- სხვა ბრძანებები (Clear, Giveaway, Userinfo, Join, Leave, daketva, gageba, auto-msg) უცვლელი რჩება ---
-    # ...(აქ არის ყველა ის ბრძანება წინა კოდიდან)...
+    # --- დამხმარე ფუნქცია SMS ლოგირებისთვის ---
+    def log_sms(self, user_id: int, direction: str, content: str, admin_id: Optional[int] = None):
+        """Logs an SMS message."""
+        user_id_str = str(user_id)
+        if user_id_str not in self.sms_logs:
+            self.sms_logs[user_id_str] = []
+        
+        log_entry = {
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "direction": direction, # "outgoing" or "incoming"
+            "content": content
+        }
+        if admin_id:
+            log_entry["admin_id"] = admin_id
+            
+        self.sms_logs[user_id_str].append(log_entry)
+        # შევინახოთ ლოგები (შეიძლება დიდი ფაილი გახდეს დროთა განმავლობაში)
+        save_data(self.sms_logs, SMS_LOG_DB)
+
+    # --- სხვა ბრძანებები (Clear, Giveaway, Userinfo, Join, Leave, daketva, gageba, auto-msg) უცვლელი ---
+    # ...(აქ ჩასვი ყველა ის ბრძანება წინა კოდიდან, რომელიც გჭირდება)...
     @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს")
     @app_commands.describe(amount="რაოდენობა (მაქს 100)")
     @app_commands.checks.has_permissions(manage_messages=True)
@@ -182,25 +209,79 @@ class UtilityCog(commands.Cog):
                 if channel: await self._send_the_message(channel)
                 else: print(f"WARNING: ვერ მოიძებნა auto-msg არხი ID={config['channel_id']}")
 
-    # --- ახალი /sms ბრძანება იწყება აქ ---
-    @app_commands.command(name="sms", description="უგზავნის პირად შეტყობინებას მომხმარებელს")
-    @app_commands.describe(
-        user="მომხმარებელი ვისაც უგზავნი",
-        text="შეტყობინების ტექსტი"
-    )
-    @app_commands.checks.has_permissions(manage_messages=True) # შეზღუდვა, რომ მხოლოდ მოდერატორებმა გამოიყენონ
+    # --- /sms ბრძანება (ანონიმური + ლოგირება) ---
+    @app_commands.command(name="sms", description="უგზავნის ანონიმურ პირად შეტყობინებას მომხმარებელს")
+    @app_commands.describe(user="მომხმარებელი ვისაც უგზავნი", text="შეტყობინების ტექსტი")
+    @app_commands.checks.has_permissions(manage_messages=True)
     async def send_sms(self, interaction: discord.Interaction, user: discord.Member, text: str):
         if user.bot:
-            await interaction.response.send_message("ბოტს პირად შეტყობინებას ვერ გაუგზავნი.", ephemeral=True)
-            return
-
+            await interaction.response.send_message("ბოტს პირად შეტყობინებას ვერ გაუგზავნი.", ephemeral=True); return
         try:
-            await user.send(f"**შეტყობინება {interaction.guild.name}-დან:**\n\n{text}\n\n*გაგზავნილია {interaction.user.mention}-ის მიერ*")
-            await interaction.response.send_message(f"შეტყობინება წარმატებით გაეგზავნა {user.mention}-ს.", ephemeral=True)
+            # ვაგზავნით შეტყობინებას გამგზავნის მითითების გარეშე
+            message_to_send = f"**შეტყობინება {interaction.guild.name}-დან:**\n\n{text}"
+            await user.send(message_to_send)
+            
+            # ვლოგავთ გაგზავნილ შეტყობინებას
+            self.log_sms(user_id=user.id, direction="outgoing", content=text, admin_id=interaction.user.id)
+            
+            await interaction.response.send_message(f"ანონიმური შეტყობინება წარმატებით გაეგზავნა {user.mention}-ს.", ephemeral=True)
         except discord.Forbidden:
-            await interaction.response.send_message(f"ვერ გავუგზავნე შეტყობინება {user.mention}-ს. შესაძლოა, დაბლოკილი მაქვს ან პირადი შეტყობინებები გამორთული აქვს.", ephemeral=True)
+            await interaction.response.send_message(f"ვერ გავუგზავნე შეტყობინება {user.mention}-ს. შესაძლოა დაბლოკილი მაქვს ან PM გამორთული აქვს.", ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(f"მოხდა შეცდომა შეტყობინების გაგზავნისას: {e}", ephemeral=True)
+
+    # --- ახალი /smslog ბრძანება ---
+    @app_commands.command(name="smslog", description="აჩვენებს მითითებულ მომხმარებელთან მიმოწერის ისტორიას")
+    @app_commands.describe(user="მომხმარებელი ვისი ლოგებიც გინდა ნახო")
+    @app_commands.checks.has_permissions(manage_messages=True) # იგივე უფლება, რაც /sms-ს
+    async def view_sms_log(self, interaction: discord.Interaction, user: discord.Member):
+        user_id_str = str(user.id)
+        
+        if user_id_str not in self.sms_logs or not self.sms_logs[user_id_str]:
+            await interaction.response.send_message(f"{user.mention}-თან მიმოწერის ისტორია ცარიელია.", ephemeral=True)
+            return
+
+        logs = self.sms_logs[user_id_str]
+        
+        embed = discord.Embed(
+            title=f"SMS ლოგი - {user.name}",
+            color=discord.Color.blurple()
+        )
+        
+        log_text = ""
+        # ვაჩვენოთ ბოლო 10 შეტყობინება (ან ნაკლები)
+        for entry in logs[-10:]:
+            timestamp = datetime.datetime.fromisoformat(entry['timestamp'])
+            time_formatted = discord.utils.format_dt(timestamp, style='f') # დროის ფორმატირება
+            direction = "➡️ (Admin)" if entry['direction'] == "outgoing" else "⬅️ (User)"
+            
+            # ვამოკლებთ გრძელ შეტყობინებებს
+            content = entry['content']
+            if len(content) > 150:
+                content = content[:147] + "..."
+                
+            log_text += f"`{time_formatted}`\n{direction}: {content}\n\n"
+
+        if not log_text:
+            log_text = "ლოგები ვერ მოიძებნა."
+
+        embed.description = log_text
+        embed.set_footer(text=f"ნაჩვენებია ბოლო {len(logs[-10:])} შეტყობინება")
+
+        await interaction.response.send_message(embed=embed, ephemeral=True) # ლოგებს ვხედავთ მხოლოდ ჩვენ
+
+    # --- ივენთი შემომავალი DM შეტყობინებების დასალოგად ---
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        # ვამოწმებთ, არის თუ არა DM და არა ბოტისგან
+        if message.guild is None and not message.author.bot:
+            user_id_str = str(message.author.id)
+            # ვლოგავთ მხოლოდ იმ მომხმარებლების პასუხებს, ვისაც ჩვენ მივწერეთ (/sms)
+            if user_id_str in self.sms_logs:
+                self.log_sms(user_id=message.author.id, direction="incoming", content=message.content)
+        
+        # ვუშვებთ ბრძანებების დამუშავებას (თუ პრეფიქსი გაქვს)
+        # await self.bot.process_commands(message) # ეს აღარ არის საჭირო discord.py 2.0+ ვერსიებში, თუ ჰიბრიდულ ბოტს არ იყენებ
 
 # --- Cog-ის ჩატვირთვის ფუნქცია ---
 async def setup(bot: commands.Bot):
