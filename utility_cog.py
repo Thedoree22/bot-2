@@ -174,8 +174,8 @@ class UtilityCog(commands.Cog):
     async def _send_the_message(self, channel: discord.TextChannel):
         message_text = (
             "⚠️ @everyone\n"
-            "წესი 1- არ ვასუბრობთ ამ ჩათზე\n"
-            "წესი 2- აუცილებლად ვიცავთ წეს 1\n"
+            "წესი 1- არ ვსაუბრობთ ამ ჩათზე\n"
+            "წესი 2- აუცილებლად ვიცავთ 1 წესს\n"
             "წესი 3- აქ რაც იწერება სერვერის პასუხისმგებლობაში არ არის :დ\n"
             "⚠️"
         )
