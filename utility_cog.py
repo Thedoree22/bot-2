@@ -200,7 +200,7 @@ class UtilityCog(commands.Cog):
             else: await interaction.response.send_message("ვერ ვიპოვე არხი. დააყენე თავიდან /set-18plus-chat.", ephemeral=True)
         else: await interaction.response.send_message("ჯერ დააყენე არხი /set-18plus-chat ბრძანებით.", ephemeral=True)
 
-    @tasks.loop(hours=1)
+    @tasks.loop(hours=5)
     async def send_auto_message(self):
         await self.bot.wait_until_ready(); data = load_data(AUTOMESSAGE_DB)
         for guild_id, config in data.items():
