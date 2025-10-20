@@ -8,24 +8,19 @@ import datetime
 import re
 from typing import Optional
 
-# --- მონაცემთა ბაზის ფაილები ---
+# ...(მონაცემთა ბაზის ფაილები და ფუნქციები უცვლელი)...
 GIVEAWAY_DB = "giveaways.json"
-AUTOMESSAGE_DB = "automessage_data.json" # ფაილი ავტო-შეტყობინებისთვის
-
-# --- მონაცემთა ბაზის ფუნქციები ---
-def load_data(file_path):
+AUTOMESSAGE_DB = "automessage_data.json"
+def load_data(file_path): # ... (კოდი იგივეა) ...
     if not os.path.exists(file_path): return {}
     try:
         with open(file_path, "r", encoding='utf-8') as f: return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError): return {}
-
-def save_data(data, file_path):
+def save_data(data, file_path): # ... (კოდი იგივეა) ...
     try:
         with open(file_path, "w", encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"ფაილში შენახვის შეცდომა ({file_path}): {e}")
-
-# ...(Giveaway ფუნქციები: parse_duration, GiveawayView უცვლელი)...
-def parse_duration(duration_str: str) -> datetime.timedelta:
+def parse_duration(duration_str: str) -> datetime.timedelta: # ... (კოდი იგივეა) ...
     regex = re.compile(r'(\d+)([smhd])'); parts = regex.findall(duration_str.lower()); delta = datetime.timedelta()
     for amount, unit in parts:
         amount = int(amount);
@@ -34,7 +29,7 @@ def parse_duration(duration_str: str) -> datetime.timedelta:
         elif unit == 'h': delta += datetime.timedelta(hours=amount)
         elif unit == 'd': delta += datetime.timedelta(days=amount)
     return delta
-class GiveawayView(discord.ui.View):
+class GiveawayView(discord.ui.View): # ... (კოდი იგივეა) ...
     def __init__(self, giveaway_message_id): super().__init__(timeout=None); self.giveaway_message_id = giveaway_message_id
     @discord.ui.button(label="მონაწილეობა", style=discord.ButtonStyle.success, custom_id="join_giveaway_button")
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -49,15 +44,14 @@ class UtilityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         if hasattr(self, 'start_giveaway'): self.check_giveaways.start()
-        self.send_auto_message.start() # ვიწყებთ ავტო-შეტყობინების ციკლს
+        self.send_auto_message.start()
 
     def cog_unload(self):
         if hasattr(self, 'check_giveaways') and self.check_giveaways.is_running(): self.check_giveaways.cancel()
         if self.send_auto_message.is_running(): self.send_auto_message.cancel()
 
-    # --- სხვა ბრძანებები (Clear, Giveaway, Userinfo, Join, Leave, daketva, gageba) უცვლელი რჩება ---
-    # ... (აქ ჩასვი ყველა ის ბრძანება წინა კოდიდან, რომელიც გჭირდება) ...
-    # მაგალითად Clear:
+    # --- სხვა ბრძანებები (Clear, Giveaway, Userinfo, Join, Leave, daketva, gageba, auto-msg) უცვლელი რჩება ---
+    # ...(აქ არის ყველა ის ბრძანება წინა კოდიდან)...
     @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს")
     @app_commands.describe(amount="რაოდენობა (მაქს 100)")
     @app_commands.checks.has_permissions(manage_messages=True)
@@ -67,12 +61,11 @@ class UtilityCog(commands.Cog):
         await interaction.response.defer(ephemeral=True); deleted_messages = await interaction.channel.purge(limit=amount)
         await interaction.followup.send(f"წარმატებით წაიშალა {len(deleted_messages)} შეტყობინება")
 
-    # --- Giveaway ბრძანება ---
     @app_commands.command(name="giveaway", description="ქმნის ახალ გათამაშებას")
     @app_commands.describe(duration="რამდენი ხანი (მაგ 10m 1h 30m 2d)", prize="რა თამაშდება", winners="გამარჯვებულის რაოდენობა (default 1)")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def start_giveaway(self, interaction: discord.Interaction, duration: str, prize: str, winners: int = 1):
-        delta = parse_duration(duration)
+        delta = parse_duration(duration);
         if delta.total_seconds() <= 0: await interaction.response.send_message("არასწორი დროის ფორმატია", ephemeral=True); return
         end_time = datetime.datetime.utcnow() + delta; end_timestamp = int(end_time.timestamp())
         embed = discord.Embed(title="🎁 ახალი გათამაშება 🎁", description=f"**პრიზი:** {prize}\n\nდააჭირე ღილაკს მონაწილეობისთვის!", color=discord.Color.gold())
@@ -82,7 +75,6 @@ class UtilityCog(commands.Cog):
         giveaways = load_data(GIVEAWAY_DB); giveaways[str(msg.id)] = {"channel_id": interaction.channel.id, "end_time": end_time.isoformat(), "prize": prize, "winners": winners, "participants": [], "host_id": interaction.user.id, "ended": False}
         save_data(giveaways, GIVEAWAY_DB)
 
-    # --- Giveaway-ს შემმოწმებელი ---
     @tasks.loop(seconds=5)
     async def check_giveaways(self):
         await self.bot.wait_until_ready(); giveaways = load_data(GIVEAWAY_DB); current_time = datetime.datetime.utcnow()
@@ -104,7 +96,6 @@ class UtilityCog(commands.Cog):
                 view = discord.ui.View(); view.add_item(discord.ui.Button(label="მონაწილეობა", style=discord.ButtonStyle.success, disabled=True))
                 await msg.edit(embed=original_embed, view=view); data['ended'] = True; save_data(giveaways, GIVEAWAY_DB)
 
-    # --- Userinfo ბრძანება ---
     @app_commands.command(name="userinfo", description="აჩვენებს ინფორმაციას მომხმარებელზე")
     @app_commands.describe(user="აირჩიე მომხმარებელი (თუ არ აირჩევ შენსას აჩვენებს)")
     async def userinfo(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
@@ -121,7 +112,6 @@ class UtilityCog(commands.Cog):
         embed.add_field(name="ბოტი?", value="კი" if target_user.bot else "არა", inline=True)
         await interaction.response.send_message(embed=embed)
 
-    # --- Join ბრძანება ---
     @app_commands.command(name="join", description="ბოტი შემოდის შენს ხმოვან არხში")
     async def join(self, interaction: discord.Interaction):
         if interaction.user.voice and interaction.user.voice.channel:
@@ -132,13 +122,11 @@ class UtilityCog(commands.Cog):
                 except Exception as e: await interaction.response.send_message(f"ვერ შემოვედი არხში: {e}", ephemeral=True)
         else: await interaction.response.send_message("ჯერ ხმოვან არხში უნდა იყო!", ephemeral=True)
 
-    # --- Leave ბრძანება ---
     @app_commands.command(name="leave", description="ბოტი გადის ხმოვანი არხიდან")
     async def leave(self, interaction: discord.Interaction):
         if interaction.guild.voice_client: await interaction.guild.voice_client.disconnect(); await interaction.response.send_message("გავედი ხმოვანი არხიდან.")
         else: await interaction.response.send_message("მე ისედაც არ ვარ ხმოვან არხში.", ephemeral=True)
 
-    # --- daketva / gageba ბრძანებები ---
     @app_commands.command(name="daketva")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def lock_channel(self, interaction: discord.Interaction):
@@ -157,61 +145,62 @@ class UtilityCog(commands.Cog):
         except discord.Forbidden: await interaction.response.send_message("არ მაქვს უფლება შევცვალო პარამეტრები.", ephemeral=True)
         except Exception as e: await interaction.response.send_message(f"მოხდა შეცდომა: {e}", ephemeral=True)
 
-    # --- ახალი Auto-Message ფუნქციონალი (ახალი ბრძანებებით) ---
-
-    # არხის დაყენების ბრძანება
+    # --- Auto-Message ფუნქციონალი ---
     @app_commands.command(name="set-18plus-chat", description="აყენებს არხს 18+ შეხსენებისთვის")
     @app_commands.describe(channel="აირჩიე არხი")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def automessage_setup(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        data = load_data(AUTOMESSAGE_DB)
-        guild_id = str(interaction.guild.id)
-        data[guild_id] = {"channel_id": channel.id}
-        save_data(data, AUTOMESSAGE_DB)
+        data = load_data(AUTOMESSAGE_DB); guild_id = str(interaction.guild.id)
+        data[guild_id] = {"channel_id": channel.id}; save_data(data, AUTOMESSAGE_DB)
         await interaction.response.send_message(f"18+ შეხსენების არხი არის {channel.mention}", ephemeral=True)
 
-    # ფუნქცია, რომელიც აგზავნის შეტყობინებას
     async def _send_the_message(self, channel: discord.TextChannel):
-        message_text = (
-            "⚠️ @everyone\n"
-            "წესი 1- არ ვსაუბრობთ ამ ჩათზე\n"
-            "წესი 2- აუცილებლად ვიცავთ 1 წესს\n"
-            "წესი 3- აქ რაც იწერება სერვერის პასუხისმგებლობაში არ არის :დ\n"
-            "⚠️"
-        )
-        try:
-            await channel.send(message_text, allowed_mentions=discord.AllowedMentions(everyone=True))
-            return True
+        message_text = ("⚠️ @everyone\nწესი 1- არ ვსაუბრობთ ამ ჩათზე\nწესი 2- აუცილებლად ვიცავთ 1 წესს\nწესი 3- აქ რაც იწერება სერვერის პასუხისმგებლობაში არ არის :დ\n⚠️")
+        try: await channel.send(message_text, allowed_mentions=discord.AllowedMentions(everyone=True)); return True
         except discord.Forbidden: print(f"ERROR: არ მაქვს უფლება გავაგზავნო #{channel.name} ({channel.guild.name})"); return False
         except Exception as e: print(f"ERROR: ავტო შეტყობინების გაგზავნისას: {e}"); return False
 
-    # ხელით გაგზავნის ბრძანება
     @app_commands.command(name="gaxseneba", description="აგზავნის 18+ შეხსენებას მითითებულ არხში")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def automessage_sendnow(self, interaction: discord.Interaction):
-        data = load_data(AUTOMESSAGE_DB)
-        guild_id = str(interaction.guild.id)
+        data = load_data(AUTOMESSAGE_DB); guild_id = str(interaction.guild.id)
         if guild_id in data and 'channel_id' in data[guild_id]:
-            channel_id = data[guild_id]['channel_id']
-            channel = self.bot.get_channel(channel_id)
+            channel_id = data[guild_id]['channel_id']; channel = self.bot.get_channel(channel_id)
             if channel:
-                await interaction.response.defer(ephemeral=True)
-                success = await self._send_the_message(channel)
+                await interaction.response.defer(ephemeral=True); success = await self._send_the_message(channel)
                 if success: await interaction.followup.send("შეტყობინება გაიგზავნა.", ephemeral=True)
                 else: await interaction.followup.send("ვერ გავაგზავნე შეტყობინება შეამოწმე უფლებები.", ephemeral=True)
             else: await interaction.response.send_message("ვერ ვიპოვე არხი. დააყენე თავიდან /set-18plus-chat.", ephemeral=True)
         else: await interaction.response.send_message("ჯერ დააყენე არხი /set-18plus-chat ბრძანებით.", ephemeral=True)
 
-    # ფონური პროცესი ავტომატური შეტყობინებისთვის
-    @tasks.loop(minutes=15)
+     @tasks.loop(hours=1)
     async def send_auto_message(self):
-        await self.bot.wait_until_ready()
-        data = load_data(AUTOMESSAGE_DB)
+        await self.bot.wait_until_ready(); data = load_data(AUTOMESSAGE_DB)
         for guild_id, config in data.items():
             if 'channel_id' in config:
                 channel = self.bot.get_channel(config['channel_id'])
                 if channel: await self._send_the_message(channel)
                 else: print(f"WARNING: ვერ მოიძებნა auto-msg არხი ID={config['channel_id']}")
+
+    # --- ახალი /sms ბრძანება იწყება აქ ---
+    @app_commands.command(name="sms", description="უგზავნის პირად შეტყობინებას მომხმარებელს")
+    @app_commands.describe(
+        user="მომხმარებელი ვისაც უგზავნი",
+        text="შეტყობინების ტექსტი"
+    )
+    @app_commands.checks.has_permissions(manage_messages=True) # შეზღუდვა, რომ მხოლოდ მოდერატორებმა გამოიყენონ
+    async def send_sms(self, interaction: discord.Interaction, user: discord.Member, text: str):
+        if user.bot:
+            await interaction.response.send_message("ბოტს პირად შეტყობინებას ვერ გაუგზავნი.", ephemeral=True)
+            return
+
+        try:
+            await user.send(f"**შეტყობინება {interaction.guild.name}-დან:**\n\n{text}\n\n*გაგზავნილია {interaction.user.mention}-ის მიერ*")
+            await interaction.response.send_message(f"შეტყობინება წარმატებით გაეგზავნა {user.mention}-ს.", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message(f"ვერ გავუგზავნე შეტყობინება {user.mention}-ს. შესაძლოა, დაბლოკილი მაქვს ან პირადი შეტყობინებები გამორთული აქვს.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"მოხდა შეცდომა შეტყობინების გაგზავნისას: {e}", ephemeral=True)
 
 # --- Cog-ის ჩატვირთვის ფუნქცია ---
 async def setup(bot: commands.Bot):
