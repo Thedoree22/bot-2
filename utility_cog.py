@@ -134,7 +134,7 @@ class UtilityCog(commands.Cog):
         await interaction.response.send_message(f"18+ შეხსენების არხი არის {channel.mention}", ephemeral=True)
 
     async def _send_the_message(self, channel: discord.TextChannel): # ... (_send_the_message კოდი) ...
-        message_text = ("⚠️ @everyone\nწესი 1- არ ვასუბრობთ ამ ჩათზე\nწესი 2- აუცილებლად ვიცავთ წეს 1\nწესი 3- აქ რაც იწერება სერვერის პასუხისმგებლობაში არ არის :დ\n⚠️")
+        message_text = ("⚠️ @everyone\nწესი 1- არ ვსაუბრობთ ამ ჩათზე !\nწესი 2- აუცილებლად ვიცავთ 1 წესს\nწესი 3- აქ რაც იწერება სერვერის პასუხისმგებლობაში არ არის :დ\n⚠️")
         try: await channel.send(message_text, allowed_mentions=discord.AllowedMentions(everyone=True)); return True
         except discord.Forbidden: print(f"ERROR: არ მაქვს უფლება გავაგზავნო #{channel.name} ({channel.guild.name})"); return False
         except Exception as e: print(f"ERROR: ავტო შეტყობინების გაგზავნისას: {e}"); return False
@@ -149,7 +149,7 @@ class UtilityCog(commands.Cog):
             else: await interaction.response.send_message("ვერ ვიპოვე არხი.", ephemeral=True)
         else: await interaction.response.send_message("ჯერ დააყენე არხი /set-18plus-chat.", ephemeral=True)
 
-    @tasks.loop(hours=1) # ... (send_auto_message კოდი) ...
+    @tasks.loop(hours=5) # ... (send_auto_message კოდი) ...
     async def send_auto_message(self):
         await self.bot.wait_until_ready(); data = load_data(AUTOMESSAGE_DB)
         for guild_id, config in data.items():
