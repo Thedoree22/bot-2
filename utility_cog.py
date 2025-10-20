@@ -8,20 +8,25 @@ import datetime
 import re
 from typing import Optional
 
-# ...(მონაცემთა ბაზის ფაილები და ფუნქციები უცვლელი)...
+# --- მონაცემთა ბაზის ფაილები ---
 GIVEAWAY_DB = "giveaways.json"
 AUTOMESSAGE_DB = "automessage_data.json"
 SMS_LOG_DB = "sms_logs.json"
-def load_data(file_path): # ... (კოდი იგივეა) ...
+
+# --- მონაცემთა ბაზის ფუნქციები ---
+def load_data(file_path):
     if not os.path.exists(file_path): return {}
     try:
         with open(file_path, "r", encoding='utf-8') as f: return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError): return {}
-def save_data(data, file_path): # ... (კოდი იგივეა) ...
+
+def save_data(data, file_path):
     try:
         with open(file_path, "w", encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"ფაილში შენახვის შეცდომა ({file_path}): {e}")
-def parse_duration(duration_str: str) -> datetime.timedelta: # ... (კოდი იგივეა) ...
+
+# --- Giveaway ფუნქციები ---
+def parse_duration(duration_str: str) -> datetime.timedelta:
     regex = re.compile(r'(\d+)([smhd])'); parts = regex.findall(duration_str.lower()); delta = datetime.timedelta()
     for amount, unit in parts:
         amount = int(amount);
@@ -31,8 +36,10 @@ def parse_duration(duration_str: str) -> datetime.timedelta: # ... (კოდი
         elif unit == 'd': delta += datetime.timedelta(days=amount)
     return delta
 
-class GiveawayView(discord.ui.View): # ... (კოდი იგივეა) ...
-    def __init__(self, giveaway_message_id): super().__init__(timeout=None); self.giveaway_message_id = giveaway_message_id
+class GiveawayView(discord.ui.View):
+    def __init__(self, giveaway_message_id):
+        super().__init__(timeout=None)
+        self.giveaway_message_id = giveaway_message_id
     @discord.ui.button(label="მონაწილეობა", style=discord.ButtonStyle.success, custom_id="join_giveaway_button")
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         giveaways = load_data(GIVEAWAY_DB); giveaway = giveaways.get(str(self.giveaway_message_id))
@@ -41,24 +48,21 @@ class GiveawayView(discord.ui.View): # ... (კოდი იგივეა) ...
         if user_id not in giveaway['participants']: giveaway['participants'].append(user_id); save_data(giveaways, GIVEAWAY_DB); await interaction.response.send_message("✅ წარმატებით ჩაერთე", ephemeral=True)
         else: await interaction.response.send_message("⚠️ შენ უკვე მონაწილეობ", ephemeral=True)
 
-# --- აქ იწყება მთავარი კლასი ---
+# --- მთავარი კლასი ---
 class UtilityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        # ვიწყებთ ყველა ფონურ პროცესს
         if hasattr(self, 'start_giveaway'):
             self.check_giveaways.start()
-            self.update_participant_counts.start() # <-- ვიწყებთ ახალ ციკლს
+            self.update_participant_counts.start() # ვიწყებთ ახალ ციკლს
         self.send_auto_message.start()
         self.sms_logs = load_data(SMS_LOG_DB)
 
     def cog_unload(self):
-        # ვაჩერებთ ყველა ფონურ პროცესს
         if hasattr(self, 'check_giveaways') and self.check_giveaways.is_running(): self.check_giveaways.cancel()
-        if hasattr(self, 'update_participant_counts') and self.update_participant_counts.is_running(): self.update_participant_counts.cancel() # <-- ვაჩერებთ ახალ ციკლს
+        if hasattr(self, 'update_participant_counts') and self.update_participant_counts.is_running(): self.update_participant_counts.cancel() # ვაჩერებთ ახალ ციკლს
         if self.send_auto_message.is_running(): self.send_auto_message.cancel()
 
-    # ... (log_sms ფუნქცია უცვლელი) ...
     def log_sms(self, user_id: int, direction: str, content: str, admin_id: Optional[int] = None):
         user_id_str = str(user_id);
         if user_id_str not in self.sms_logs: self.sms_logs[user_id_str] = []
@@ -66,9 +70,8 @@ class UtilityCog(commands.Cog):
         if admin_id: log_entry["admin_id"] = admin_id
         self.sms_logs[user_id_str].append(log_entry); save_data(self.sms_logs, SMS_LOG_DB)
 
-    # --- სხვა ბრძანებები (Clear, Userinfo, Join, Leave, daketva, gageba, auto-msg, sms, smslog) ---
-    # ...(აქ ჩასვი ყველა სხვა ბრძანება წინა კოდიდან)...
-    @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს") # ... (Clear კოდი) ...
+    # --- სხვა ბრძანებები ---
+    @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს")
     @app_commands.describe(amount="რაოდენობა (მაქს 100)")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def clear(self, interaction: discord.Interaction, amount: int):
@@ -77,7 +80,6 @@ class UtilityCog(commands.Cog):
         await interaction.response.defer(ephemeral=True); deleted_messages = await interaction.channel.purge(limit=amount)
         await interaction.followup.send(f"წარმატებით წაიშალა {len(deleted_messages)} შეტყობინება")
 
-    # --- Giveaway ბრძანება (განახლებული Embed-ით) ---
     @app_commands.command(name="giveaway", description="ქმნის ახალ გათამაშებას")
     @app_commands.describe(duration="რამდენი ხანი (მაგ 10m 1h 30m 2d)", prize="რა თამაშდება", winners="გამარჯვებულის რაოდენობა (default 1)")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -86,15 +88,15 @@ class UtilityCog(commands.Cog):
         if delta.total_seconds() <= 0: await interaction.response.send_message("არასწორი დროის ფორმატია", ephemeral=True); return
         end_time = datetime.datetime.utcnow() + delta; end_timestamp = int(end_time.timestamp())
         embed = discord.Embed(title="🎁 ახალი გათამაშება 🎁", description=f"**პრიზი:** {prize}\n\nდააჭირე ღილაკს მონაწილეობისთვის!", color=discord.Color.gold())
-        embed.add_field(name="მთავრდება:", value=f"<t:{end_timestamp}:R> (<t:{end_timestamp}:F>)", inline=True) # შევცვალეთ inline
-        embed.add_field(name="გამარჯვებული:", value=f"{winners} კაცი", inline=True) # შევცვალეთ inline
-        embed.add_field(name="👥 მონაწილეები:", value="0", inline=True) # <-- დავამატეთ მონაწილეების ველი
+        embed.add_field(name="მთავრდება:", value=f"<t:{end_timestamp}:R> (<t:{end_timestamp}:F>)", inline=True)
+        embed.add_field(name="გამარჯვებული:", value=f"{winners} კაცი", inline=True)
+        embed.add_field(name="👥 მონაწილეები:", value="0", inline=True)
         embed.set_footer(text=f"ორგანიზატორი: {interaction.user.name}"); await interaction.response.send_message("გათამაშება იწყება...", ephemeral=True)
         msg = await interaction.channel.send(embed=embed); view = GiveawayView(msg.id); await msg.edit(view=view)
         giveaways = load_data(GIVEAWAY_DB); giveaways[str(msg.id)] = {"channel_id": interaction.channel.id, "end_time": end_time.isoformat(), "prize": prize, "winners": winners, "participants": [], "host_id": interaction.user.id, "ended": False}
         save_data(giveaways, GIVEAWAY_DB)
 
-    # --- Giveaway-ს შემმოწმებელი (განახლებული დასრულების Embed-ით) ---
+    # --- Giveaway-ს შემმოწმებელი ---
     @tasks.loop(seconds=5)
     async def check_giveaways(self):
         await self.bot.wait_until_ready(); giveaways = load_data(GIVEAWAY_DB); current_time = datetime.datetime.utcnow()
@@ -114,61 +116,56 @@ class UtilityCog(commands.Cog):
                 try:
                     original_embed = msg.embeds[0]
                     original_embed.title = "🎁 გათამაშება დასრულდა!"; original_embed.description = f"**პრიზი:** {prize}"; original_embed.color = discord.Color.dark_grey()
-                    # ვანახლებთ ველებს
-                    original_embed.set_field_at(0, name="დასრულდა:", value=f"<t:{int(end_time.timestamp())}:R>", inline=True) # Index 0
-                    original_embed.set_field_at(1, name="გამარჯვებული:", value=winner_text if winners_list else "არავინ", inline=True) # Index 1
-                    original_embed.set_field_at(2, name="👥 მონაწილეები:", value=f"{participant_count}", inline=True) # Index 2 (განახლებული)
-
+                    original_embed.set_field_at(0, name="დასრულდა:", value=f"<t:{int(end_time.timestamp())}:R>", inline=True)
+                    if len(original_embed.fields) > 1: original_embed.set_field_at(1, name="გამარჯვებული:", value=winner_text if winners_list else "არავინ", inline=True) # შევცვალეთ remove_field -> set_field_at
+                    if len(original_embed.fields) > 2: original_embed.set_field_at(2, name="👥 მონაწილეები:", value=f"{participant_count}", inline=True)
                     view = discord.ui.View(); view.add_item(discord.ui.Button(label="მონაწილეობა", style=discord.ButtonStyle.success, disabled=True))
                     await msg.edit(embed=original_embed, view=view)
                 except Exception as edit_error: print(f"გათამაშების ძველი შეტყობინების ედიტის შეცდომა: {edit_error}")
                 data['ended'] = True; save_data(giveaways, GIVEAWAY_DB)
 
-    # --- ახალი ფონური პროცესი: მონაწილეთა რაოდენობის განახლება ---
-    @tasks.loop(minutes=1) # ანახლებს ყოველ წუთში
+    # --- მონაწილეთა რაოდენობის განახლება (გასწორებული) ---
+    @tasks.loop(minutes=1)
     async def update_participant_counts(self):
         await self.bot.wait_until_ready()
         giveaways = load_data(GIVEAWAY_DB)
         for msg_id, data in giveaways.items():
-            if data.get('ended', False): continue # გამოვტოვოთ დასრულებულები
+            if data.get('ended', False): continue
 
             channel = self.bot.get_channel(data['channel_id'])
             if not channel: continue
 
             try:
                 msg = await channel.fetch_message(int(msg_id))
-                if not msg.embeds: continue # თუ შეტყობინებას Embed აღარ აქვს
+                if not msg.embeds: continue
 
                 current_embed = msg.embeds[0]
                 participant_count = len(data.get('participants', []))
 
-                # ვპოულობთ მონაწილეების ველს (ვიგულისხმოთ რომ ის მე-3 ველია, index=2)
-                # და ვანახლებთ მის მნიშვნელობას
-                # ვამოწმებთ ველების რაოდენობას, რომ შეცდომა არ მოხდეს
+                # ვამოწმებთ ველების რაოდენობას
                 if len(current_embed.fields) >= 3:
-                     # ვიღებთ მიმდინარე მნიშვნელობას
-                     current_value_str = current_embed.fields[2].value
-                     # ვანახლებთ მხოლოდ იმ შემთხვევაში, თუ მნიშვნელობა შეიცვალა
-                     if current_value_str != str(participant_count):
-                          current_embed.set_field_at(2, name="👥 მონაწილეები:", value=str(participant_count), inline=True)
-                          await msg.edit(embed=current_embed)
+                    # ვიღებთ მიმდინარე მნიშვნელობას (მე-3 ველი, index 2)
+                    current_value_str = current_embed.fields[2].value
+                    # ვანახლებთ მხოლოდ თუ შეიცვალა
+                    if current_value_str != str(participant_count):
+                        current_embed.set_field_at(2, name="👥 მონაწილეები:", value=str(participant_count), inline=True)
+                        await msg.edit(embed=current_embed) # <<<--- ეს იყო სავარაუდოდ 191-ე ხაზი და სწორია
                 else:
-                    # თუ ველი რატომღაც არ არსებობს (არ უნდა მოხდეს წესით), ვცადოთ დამატება
+                    # ეს არ უნდა მოხდეს, მაგრამ ყოველი შემთხვევისთვის
                     current_embed.add_field(name="👥 მონაწილეები:", value=str(participant_count), inline=True)
                     await msg.edit(embed=current_embed)
 
-
             except discord.NotFound:
-                # თუ შეტყობინება წაშლილია, აღვნიშნოთ როგორც დასრულებული
                 print(f"Giveaway message {msg_id} not found, marking as ended.")
                 giveaways[msg_id]['ended'] = True
                 save_data(giveaways, GIVEAWAY_DB)
             except discord.Forbidden:
                 print(f"უფლება არ მაქვს შევცვალო giveaway message {msg_id} არხში #{channel.name}")
-                # აქ შეგვიძლია გავაჩეროთ ამ კონკრეტული გათამაშების განახლება?
-                pass
+                pass # ვაგრძელებთ მუშაობას სხვა გათამაშებებზე
             except Exception as e:
                 print(f"მონაწილეების განახლების შეცდომა giveaway {msg_id}: {e}")
+                import traceback
+                traceback.print_exc() # ვბეჭდავთ დეტალურ შეცდომას
 
     # ... (დანარჩენი ბრძანებები: userinfo, join, leave, daketva, gageba, auto-msg, sms, smslog უცვლელი) ...
     @app_commands.command(name="userinfo", description="აჩვენებს ინფორმაციას მომხმარებელზე") # ... (Userinfo კოდი) ...
