@@ -52,17 +52,21 @@ class GiveawayView(discord.ui.View):
 class UtilityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        # ვიწყებთ ფონურ პროცესებს მხოლოდ იმ შემთხვევაში, თუ შესაბამისი ბრძანება არსებობს
         if hasattr(self, 'start_giveaway'):
             self.check_giveaways.start()
-            self.update_participant_counts.start() # ვიწყებთ ახალ ციკლს
-        self.send_auto_message.start()
-        self.sms_logs = load_data(SMS_LOG_DB)
+            self.update_participant_counts.start()
+        if hasattr(self, 'automessage_setup'):
+            self.send_auto_message.start()
+        self.sms_logs = load_data(SMS_LOG_DB) # sms ლოგებს ყოველთვის ვტვირთავთ
 
     def cog_unload(self):
+        # ვაჩერებთ ფონურ პროცესებს მხოლოდ იმ შემთხვევაში, თუ მუშაობენ
         if hasattr(self, 'check_giveaways') and self.check_giveaways.is_running(): self.check_giveaways.cancel()
-        if hasattr(self, 'update_participant_counts') and self.update_participant_counts.is_running(): self.update_participant_counts.cancel() # ვაჩერებთ ახალ ციკლს
-        if self.send_auto_message.is_running(): self.send_auto_message.cancel()
+        if hasattr(self, 'update_participant_counts') and self.update_participant_counts.is_running(): self.update_participant_counts.cancel()
+        if hasattr(self, 'send_auto_message') and self.send_auto_message.is_running(): self.send_auto_message.cancel()
 
+    # --- დამხმარე ფუნქცია SMS ლოგირებისთვის ---
     def log_sms(self, user_id: int, direction: str, content: str, admin_id: Optional[int] = None):
         user_id_str = str(user_id);
         if user_id_str not in self.sms_logs: self.sms_logs[user_id_str] = []
@@ -70,7 +74,7 @@ class UtilityCog(commands.Cog):
         if admin_id: log_entry["admin_id"] = admin_id
         self.sms_logs[user_id_str].append(log_entry); save_data(self.sms_logs, SMS_LOG_DB)
 
-    # --- სხვა ბრძანებები ---
+    # --- Clear ბრძანება ---
     @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს")
     @app_commands.describe(amount="რაოდენობა (მაქს 100)")
     @app_commands.checks.has_permissions(manage_messages=True)
@@ -80,6 +84,7 @@ class UtilityCog(commands.Cog):
         await interaction.response.defer(ephemeral=True); deleted_messages = await interaction.channel.purge(limit=amount)
         await interaction.followup.send(f"წარმატებით წაიშალა {len(deleted_messages)} შეტყობინება")
 
+    # --- Giveaway ბრძანება ---
     @app_commands.command(name="giveaway", description="ქმნის ახალ გათამაშებას")
     @app_commands.describe(duration="რამდენი ხანი (მაგ 10m 1h 30m 2d)", prize="რა თამაშდება", winners="გამარჯვებულის რაოდენობა (default 1)")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -106,69 +111,70 @@ class UtilityCog(commands.Cog):
             if current_time >= end_time:
                 channel = self.bot.get_channel(data['channel_id']);
                 if not channel: continue
-                try: msg = await channel.fetch_message(int(msg_id))
-                except discord.NotFound: data['ended'] = True; save_data(giveaways, GIVEAWAY_DB); continue
-                participants = data['participants']; prize = data.get('prize', 'უცნობი პრიზი'); participant_count = len(participants)
-                if not participants: winner_text = "არავინ მიიღო მონაწილეობა"; winners_list = []
-                else: winner_ids = random.sample(participants, k=min(data['winners'], len(participants))); winners_list = [f"<@{uid}>" for uid in winner_ids]; winner_text = ", ".join(winners_list)
-                winner_embed = discord.Embed(title="🎉 გათამაშება დასრულდა!", description=f"**პრიზი:** {prize}\n\n**მონაწილეობდა:** {participant_count} კაცი\n\n**გამარჯვებული:** {winner_text}", color=discord.Color.green())
-                await channel.send(content=winner_text, embed=winner_embed);
+                msg = None # დავაყენოთ None თავიდან
                 try:
-                    original_embed = msg.embeds[0]
-                    original_embed.title = "🎁 გათამაშება დასრულდა!"; original_embed.description = f"**პრიზი:** {prize}"; original_embed.color = discord.Color.dark_grey()
-                    original_embed.set_field_at(0, name="დასრულდა:", value=f"<t:{int(end_time.timestamp())}:R>", inline=True)
-                    if len(original_embed.fields) > 1: original_embed.set_field_at(1, name="გამარჯვებული:", value=winner_text if winners_list else "არავინ", inline=True) # შევცვალეთ remove_field -> set_field_at
-                    if len(original_embed.fields) > 2: original_embed.set_field_at(2, name="👥 მონაწილეები:", value=f"{participant_count}", inline=True)
-                    view = discord.ui.View(); view.add_item(discord.ui.Button(label="მონაწილეობა", style=discord.ButtonStyle.success, disabled=True))
-                    await msg.edit(embed=original_embed, view=view)
-                except Exception as edit_error: print(f"გათამაშების ძველი შეტყობინების ედიტის შეცდომა: {edit_error}")
-                data['ended'] = True; save_data(giveaways, GIVEAWAY_DB)
+                    msg = await channel.fetch_message(int(msg_id)) # ვიპოვოთ შეტყობინება
+                    participants = data['participants']; prize = data.get('prize', 'უცნობი პრიზი'); participant_count = len(participants)
+                    if not participants: winner_text = "არავინ მიიღო მონაწილეობა"; winners_list = []
+                    else: winner_ids = random.sample(participants, k=min(data['winners'], len(participants))); winners_list = [f"<@{uid}>" for uid in winner_ids]; winner_text = ", ".join(winners_list)
+                    winner_embed = discord.Embed(title="🎉 გათამაშება დასრულდა!", description=f"**პრიზი:** {prize}\n\n**მონაწილეობდა:** {participant_count} კაცი\n\n**გამარჯვებული:** {winner_text}", color=discord.Color.green())
+                    await channel.send(content=winner_text, embed=winner_embed);
+                    # ვცადოთ ძველი შეტყობინების ედიტი
+                    if msg and msg.embeds: # დავამატეთ შემოწმება msg.embeds
+                        original_embed = msg.embeds[0]
+                        original_embed.title = "🎁 გათამაშება დასრულდა!"; original_embed.description = f"**პრიზი:** {prize}"; original_embed.color = discord.Color.dark_grey()
+                        original_embed.set_field_at(0, name="დასრულდა:", value=f"<t:{int(end_time.timestamp())}:R>", inline=True)
+                        if len(original_embed.fields) > 1: original_embed.set_field_at(1, name="გამარჯვებული:", value=winner_text if winners_list else "არავინ", inline=True)
+                        if len(original_embed.fields) > 2: original_embed.set_field_at(2, name="👥 მონაწილეები:", value=f"{participant_count}", inline=True)
+                        view = discord.ui.View(); view.add_item(discord.ui.Button(label="მონაწილეობა", style=discord.ButtonStyle.success, disabled=True))
+                        await msg.edit(embed=original_embed, view=view)
+                except discord.NotFound: print(f"Giveaway message {msg_id} not found during ending.") # თუ შეტყობინება ვერ მოიძებნა
+                except Exception as e: print(f"Error ending giveaway {msg_id}: {e}") # ზოგადი შეცდომა
+                finally: # ეს ბლოკი ყოველთვის შესრულდება (შეცდომის შემთხვევაშიც)
+                    giveaways[msg_id]['ended'] = True; save_data(giveaways, GIVEAWAY_DB) # დავასრულოთ გათამაშება მონაცემებში
 
-    # --- მონაწილეთა რაოდენობის განახლება (გასწორებული) ---
+    # --- მონაწილეთა რაოდენობის განახლება ---
     @tasks.loop(minutes=1)
     async def update_participant_counts(self):
         await self.bot.wait_until_ready()
         giveaways = load_data(GIVEAWAY_DB)
         for msg_id, data in giveaways.items():
-            if data.get('ended', False): continue
+            if data.get('ended', False): continue # გამოვტოვოთ დასრულებულები
 
             channel = self.bot.get_channel(data['channel_id'])
             if not channel: continue
 
             try:
                 msg = await channel.fetch_message(int(msg_id))
-                if not msg.embeds: continue
+                if not msg.embeds: continue # თუ შეტყობინებას Embed აღარ აქვს
 
                 current_embed = msg.embeds[0]
                 participant_count = len(data.get('participants', []))
 
-                # ვამოწმებთ ველების რაოდენობას
+                # ვამოწმებთ ველების რაოდენობას და მესამე ველის არსებობას
                 if len(current_embed.fields) >= 3:
                     # ვიღებთ მიმდინარე მნიშვნელობას (მე-3 ველი, index 2)
                     current_value_str = current_embed.fields[2].value
                     # ვანახლებთ მხოლოდ თუ შეიცვალა
                     if current_value_str != str(participant_count):
                         current_embed.set_field_at(2, name="👥 მონაწილეები:", value=str(participant_count), inline=True)
-                        await msg.edit(embed=current_embed) # <<<--- ეს იყო სავარაუდოდ 191-ე ხაზი და სწორია
-                else:
-                    # ეს არ უნდა მოხდეს, მაგრამ ყოველი შემთხვევისთვის
-                    current_embed.add_field(name="👥 მონაწილეები:", value=str(participant_count), inline=True)
-                    await msg.edit(embed=current_embed)
+                        await msg.edit(embed=current_embed) # <<< ეს ხაზი სწორია
+                # else: # თუ მესამე ველი არ არსებობს (არ უნდა მოხდეს წესით), არაფერს ვაკეთებთ
 
             except discord.NotFound:
-                print(f"Giveaway message {msg_id} not found, marking as ended.")
+                print(f"Giveaway message {msg_id} not found during update. Marking as ended.")
                 giveaways[msg_id]['ended'] = True
                 save_data(giveaways, GIVEAWAY_DB)
             except discord.Forbidden:
                 print(f"უფლება არ მაქვს შევცვალო giveaway message {msg_id} არხში #{channel.name}")
-                pass # ვაგრძელებთ მუშაობას სხვა გათამაშებებზე
+                pass
             except Exception as e:
                 print(f"მონაწილეების განახლების შეცდომა giveaway {msg_id}: {e}")
-                import traceback
-                traceback.print_exc() # ვბეჭდავთ დეტალურ შეცდომას
+                # import traceback # დეტალური ლოგისთვის
+                # traceback.print_exc()
 
-    # ... (დანარჩენი ბრძანებები: userinfo, join, leave, daketva, gageba, auto-msg, sms, smslog უცვლელი) ...
-    @app_commands.command(name="userinfo", description="აჩვენებს ინფორმაციას მომხმარებელზე") # ... (Userinfo კოდი) ...
+    # --- Userinfo ბრძანება ---
+    @app_commands.command(name="userinfo", description="აჩვენებს ინფორმაციას მომხმარებელზე")
     @app_commands.describe(user="აირჩიე მომხმარებელი (თუ არ აირჩევ შენსას აჩვენებს)")
     async def userinfo(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
         target_user = user or interaction.user; embed = discord.Embed(title=f"{target_user.name}#{target_user.discriminator}" if target_user.discriminator != '0' else target_user.name, color=target_user.color)
@@ -180,20 +186,25 @@ class UtilityCog(commands.Cog):
         if target_user.top_role.name != "@everyone": embed.add_field(name="უმაღლესი როლი", value=target_user.top_role.mention, inline=True)
         embed.add_field(name="ბოტი?", value="კი" if target_user.bot else "არა", inline=True); await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="join", description="ბოტი შემოდის შენს ხმოვან არხში") # ... (Join კოდი) ...
+    # --- Join ბრძანება ---
+    @app_commands.command(name="join", description="ბოტი შემოდის შენს ხმოვან არხში")
     async def join(self, interaction: discord.Interaction):
         if interaction.user.voice and interaction.user.voice.channel:
             channel = interaction.user.voice.channel
             if interaction.guild.voice_client: await interaction.guild.voice_client.move_to(channel); await interaction.response.send_message(f"გადმოვედი `{channel.name}`-ში.")
-            else: try: await channel.connect(); await interaction.response.send_message(f"შემოვედი `{channel.name}`-ში.") except Exception as e: await interaction.response.send_message(f"ვერ შემოვედი არხში: {e}", ephemeral=True)
+            else:
+                try: await channel.connect(); await interaction.response.send_message(f"შემოვედი `{channel.name}`-ში.")
+                except Exception as e: await interaction.response.send_message(f"ვერ შემოვედი არხში: {e}", ephemeral=True)
         else: await interaction.response.send_message("ჯერ ხმოვან არხში უნდა იყო!", ephemeral=True)
 
-    @app_commands.command(name="leave", description="ბოტი გადის ხმოვანი არხიდან") # ... (Leave კოდი) ...
+    # --- Leave ბრძანება ---
+    @app_commands.command(name="leave", description="ბოტი გადის ხმოვანი არხიდან")
     async def leave(self, interaction: discord.Interaction):
         if interaction.guild.voice_client: await interaction.guild.voice_client.disconnect(); await interaction.response.send_message("გავედი ხმოვანი არხიდან.")
         else: await interaction.response.send_message("მე ისედაც არ ვარ ხმოვან არხში.", ephemeral=True)
 
-    @app_commands.command(name="daketva") # ... (daketva კოდი) ...
+    # --- daketva ბრძანება ---
+    @app_commands.command(name="daketva")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def lock_channel(self, interaction: discord.Interaction):
         channel = interaction.channel; everyone_role = interaction.guild.default_role; overwrites = channel.overwrites_for(everyone_role); overwrites.send_messages = False
@@ -201,7 +212,8 @@ class UtilityCog(commands.Cog):
         except discord.Forbidden: await interaction.response.send_message("არ მაქვს უფლება შევცვალო პარამეტრები.", ephemeral=True)
         except Exception as e: await interaction.response.send_message(f"მოხდა შეცდომა: {e}", ephemeral=True)
 
-    @app_commands.command(name="gageba") # ... (gageba კოდი) ...
+    # --- gageba ბრძანება ---
+    @app_commands.command(name="gageba")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def unlock_channel(self, interaction: discord.Interaction):
         channel = interaction.channel; everyone_role = interaction.guild.default_role; overwrites = channel.overwrites_for(everyone_role); overwrites.send_messages = None
@@ -210,20 +222,20 @@ class UtilityCog(commands.Cog):
         except Exception as e: await interaction.response.send_message(f"მოხდა შეცდომა: {e}", ephemeral=True)
 
     # --- Auto-Message ფუნქციონალი ---
-    @app_commands.command(name="set-18plus-chat", description="აყენებს არხს 18+ შეხსენებისთვის") # ... (auto-msg setup კოდი) ...
+    @app_commands.command(name="set-18plus-chat", description="აყენებს არხს 18+ შეხსენებისთვის")
     @app_commands.describe(channel="აირჩიე არხი")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def automessage_setup(self, interaction: discord.Interaction, channel: discord.TextChannel):
         data = load_data(AUTOMESSAGE_DB); guild_id = str(interaction.guild.id); data[guild_id] = {"channel_id": channel.id}; save_data(data, AUTOMESSAGE_DB)
         await interaction.response.send_message(f"18+ შეხსენების არხი არის {channel.mention}", ephemeral=True)
 
-    async def _send_the_message(self, channel: discord.TextChannel): # ... (_send_the_message კოდი) ...
+    async def _send_the_message(self, channel: discord.TextChannel):
         message_text = ("⚠️ @everyone\nწესი 1- არ ვსაუბრობთ ამ ჩათზე\nწესი 2- აუცილებლად ვიცავთ 1 წესს\nწესი 3- აქ რაც იწერება სერვერის პასუხისმგებლობაში არ არის :დ\n⚠️")
         try: await channel.send(message_text, allowed_mentions=discord.AllowedMentions(everyone=True)); return True
         except discord.Forbidden: print(f"ERROR: არ მაქვს უფლება გავაგზავნო #{channel.name} ({channel.guild.name})"); return False
         except Exception as e: print(f"ERROR: ავტო შეტყობინების გაგზავნისას: {e}"); return False
 
-    @app_commands.command(name="gaxseneba", description="აგზავნის 18+ შეხსენებას მითითებულ არხში") # ... (gaxseneba კოდი) ...
+    @app_commands.command(name="gaxseneba", description="აგზავნის 18+ შეხსენებას მითითებულ არხში")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def automessage_sendnow(self, interaction: discord.Interaction):
         data = load_data(AUTOMESSAGE_DB); guild_id = str(interaction.guild.id)
@@ -233,7 +245,7 @@ class UtilityCog(commands.Cog):
             else: await interaction.response.send_message("ვერ ვიპოვე არხი.", ephemeral=True)
         else: await interaction.response.send_message("ჯერ დააყენე არხი /set-18plus-chat.", ephemeral=True)
 
-    @tasks.loop(hours=5) # ... (send_auto_message კოდი) ...
+    @tasks.loop(hours=1)
     async def send_auto_message(self):
         await self.bot.wait_until_ready(); data = load_data(AUTOMESSAGE_DB)
         for guild_id, config in data.items():
@@ -242,7 +254,7 @@ class UtilityCog(commands.Cog):
             else: print(f"WARNING: ვერ მოიძებნა auto-msg არხი ID={config['channel_id']}")
 
     # --- /sms ბრძანება ---
-    @app_commands.command(name="sms", description="უგზავნის ანონიმურ პირად შეტყობინებას მომხმარებელს") # ... (sms კოდი) ...
+    @app_commands.command(name="sms", description="უგზავნის ანონიმურ პირად შეტყობინებას მომხმარებელს")
     @app_commands.describe(user="მომხმარებელი ვისაც უგზავნი", text="შეტყობინების ტექსტი")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def send_sms(self, interaction: discord.Interaction, user: discord.Member, text: str):
@@ -255,7 +267,7 @@ class UtilityCog(commands.Cog):
         except Exception as e: await interaction.response.send_message(f"მოხდა შეცდომა: {e}", ephemeral=True)
 
     # --- /smslog ბრძანება ---
-    @app_commands.command(name="smslog", description="აჩვენებს მითითებულ მომხმარებელთან მიმოწერის ისტორიას") # ... (smslog კოდი) ...
+    @app_commands.command(name="smslog", description="აჩვენებს მითითებულ მომხმარებელთან მიმოწერის ისტორიას")
     @app_commands.describe(user="მომხმარებელი ვისი ლოგებიც გინდა ნახო")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def view_sms_log(self, interaction: discord.Interaction, user: discord.Member):
