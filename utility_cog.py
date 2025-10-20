@@ -8,20 +8,16 @@ import datetime
 import re
 from typing import Optional
 
-# --- Giveaway მონაცემთა ბაზა ---
+# ...(Giveaway-ს მონაცემთა ბაზა და ფუნქციები უცვლელი)...
 GIVEAWAY_DB = "giveaways.json"
-
-# ...(load_giveaway_data, save_giveaway_data, parse_duration, GiveawayView უცვლელი)...
-def load_giveaway_data():
+def load_giveaway_data(): # ... (კოდი იგივეა) ...
     if not os.path.exists(GIVEAWAY_DB): return {}
     try:
         with open(GIVEAWAY_DB, "r") as f: return json.load(f)
     except json.JSONDecodeError: return {}
-
-def save_giveaway_data(data):
-    with open(GIVEAWAY_DB, "w") as f: json.dump(data, f, indent=4)
-
-def parse_duration(duration_str: str) -> datetime.timedelta:
+def save_giveaway_data(data): # ... (კოდი იგივეა) ...
+     with open(GIVEAWAY_DB, "w") as f: json.dump(data, f, indent=4)
+def parse_duration(duration_str: str) -> datetime.timedelta: # ... (კოდი იგივეა) ...
     regex = re.compile(r'(\d+)([smhd])'); parts = regex.findall(duration_str.lower()); delta = datetime.timedelta()
     for amount, unit in parts:
         amount = int(amount)
@@ -30,8 +26,7 @@ def parse_duration(duration_str: str) -> datetime.timedelta:
         elif unit == 'h': delta += datetime.timedelta(hours=amount)
         elif unit == 'd': delta += datetime.timedelta(days=amount)
     return delta
-
-class GiveawayView(discord.ui.View):
+class GiveawayView(discord.ui.View): # ... (კოდი იგივეა) ...
     def __init__(self, giveaway_message_id): super().__init__(timeout=None); self.giveaway_message_id = giveaway_message_id
     @discord.ui.button(label="მონაწილეობა", style=discord.ButtonStyle.success, custom_id="join_giveaway_button")
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -47,16 +42,17 @@ class GiveawayView(discord.ui.View):
 class UtilityCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.check_giveaways.start()
+        if hasattr(self, 'start_giveaway'): self.check_giveaways.start()
 
     def cog_unload(self):
-        self.check_giveaways.cancel()
+        if hasattr(self, 'check_giveaways') and self.check_giveaways.is_running(): self.check_giveaways.cancel()
 
     # --- Clear ბრძანება ---
     @app_commands.command(name="clear", description="შლის ჩატის შეტყობინებებს")
     @app_commands.describe(amount="რაოდენობა (მაქს 100)")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def clear(self, interaction: discord.Interaction, amount: int):
+        if amount <= 0 : await interaction.response.send_message("რაოდენობა 0-ზე მეტი უნდა იყოს.", ephemeral=True); return
         if amount > 100: await interaction.response.send_message("100ზე მეტის წაშლა არ შემიძლია", ephemeral=True); return
         await interaction.response.defer(ephemeral=True); deleted_messages = await interaction.channel.purge(limit=amount)
         await interaction.followup.send(f"წარმატებით წაიშალა {len(deleted_messages)} შეტყობინება")
@@ -116,37 +112,48 @@ class UtilityCog(commands.Cog):
         embed.add_field(name="ბოტი?", value="კი" if target_user.bot else "არა", inline=True)
         await interaction.response.send_message(embed=embed)
 
-    # --- ახალი /join ბრძანება ---
+    # --- Join ბრძანება ---
     @app_commands.command(name="join", description="ბოტი შემოდის შენს ხმოვან არხში")
     async def join(self, interaction: discord.Interaction):
-        # 1. ვამოწმებთ, არის თუ არა მომხმარებელი ხმოვან არხში
         if interaction.user.voice and interaction.user.voice.channel:
             channel = interaction.user.voice.channel
-            # 2. ვამოწმებთ, არის თუ არა ბოტი უკვე ხმოვან არხში ამ სერვერზე
-            if interaction.guild.voice_client:
-                # თუ არის, გადაგვყავს მომხმარებლის არხში
-                await interaction.guild.voice_client.move_to(channel)
-                await interaction.response.send_message(f"გადმოვედი `{channel.name}`-ში.")
+            if interaction.guild.voice_client: await interaction.guild.voice_client.move_to(channel); await interaction.response.send_message(f"გადმოვედი `{channel.name}`-ში.")
             else:
-                # თუ არ არის, ვუერთდებით მომხმარებლის არხს
-                try:
-                    await channel.connect()
-                    await interaction.response.send_message(f"შემოვედი `{channel.name}`-ში.")
-                except Exception as e:
-                    await interaction.response.send_message(f"ვერ შემოვედი არხში: {e}", ephemeral=True)
-        else:
-            # თუ მომხმარებელი არ არის ხმოვან არხში
-            await interaction.response.send_message("ჯერ ხმოვან არხში უნდა იყო!", ephemeral=True)
+                try: await channel.connect(); await interaction.response.send_message(f"შემოვედი `{channel.name}`-ში.")
+                except Exception as e: await interaction.response.send_message(f"ვერ შემოვედი არხში: {e}", ephemeral=True)
+        else: await interaction.response.send_message("ჯერ ხმოვან არხში უნდა იყო!", ephemeral=True)
 
-    # --- (სურვილისამებრ) დავამატოთ /leave ბრძანებაც ---
+    # --- Leave ბრძანება ---
     @app_commands.command(name="leave", description="ბოტი გადის ხმოვანი არხიდან")
     async def leave(self, interaction: discord.Interaction):
         if interaction.guild.voice_client:
-            await interaction.guild.voice_client.disconnect()
-            await interaction.response.send_message("გავედი ხმოვანი არხიდან.")
-        else:
-            await interaction.response.send_message("მე ისედაც არ ვარ ხმოვან არხში.", ephemeral=True)
+            await interaction.guild.voice_client.disconnect(); await interaction.response.send_message("გავედი ხმოვანი არხიდან.")
+        else: await interaction.response.send_message("მე ისედაც არ ვარ ხმოვან არხში.", ephemeral=True)
 
+    # --- /daketva ბრძანება (ემოჯის გარეშე) ---
+    @app_commands.command(name="daketva", description="კეტავს ამ არხს (უშლის @everyone-ს წერას)")
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def lock_channel(self, interaction: discord.Interaction):
+        channel = interaction.channel; everyone_role = interaction.guild.default_role
+        overwrites = channel.overwrites_for(everyone_role); overwrites.send_messages = False
+        try:
+            await channel.set_permissions(everyone_role, overwrite=overwrites)
+            await interaction.response.send_message("არხი დაიკეტა.") # <<< ემოჯი მოშორებულია
+        except discord.Forbidden: await interaction.response.send_message("არ მაქვს უფლება შევცვალო პარამეტრები.", ephemeral=True)
+        except Exception as e: await interaction.response.send_message(f"მოხდა შეცდომა: {e}", ephemeral=True)
 
-async def setup(bot: commands.Cog):
+    # --- /gageba ბრძანება (ემოჯის გარეშე) ---
+    @app_commands.command(name="gageba", description="აღებს ამ არხს (აძლევს @everyone-ს წერის უფლებას)")
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def unlock_channel(self, interaction: discord.Interaction):
+        channel = interaction.channel; everyone_role = interaction.guild.default_role
+        overwrites = channel.overwrites_for(everyone_role); overwrites.send_messages = None # ან True
+        try:
+            await channel.set_permissions(everyone_role, overwrite=overwrites)
+            await interaction.response.send_message("არხი გაიღო.") # <<< ემოჯი მოშორებულია
+        except discord.Forbidden: await interaction.response.send_message("არ მაქვს უფლება შევცვალო პარამეტრები.", ephemeral=True)
+        except Exception as e: await interaction.response.send_message(f"მოხდა შეცდომა: {e}", ephemeral=True)
+
+# --- Cog-ის ჩატვირთვის ფუნქცია ---
+async def setup(bot: commands.Bot):
     await bot.add_cog(UtilityCog(bot))
