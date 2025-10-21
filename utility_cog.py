@@ -134,7 +134,7 @@ class UtilityCog(commands.Cog):
                     giveaways[msg_id]['ended'] = True; save_data(giveaways, GIVEAWAY_DB) # დავასრულოთ გათამაშება მონაცემებში
 
     # --- მონაწილეთა რაოდენობის განახლება ---
-    @tasks.loop(minutes=1)
+    @tasks.loop(seconds=1)
     async def update_participant_counts(self):
         await self.bot.wait_until_ready()
         giveaways = load_data(GIVEAWAY_DB)
@@ -245,7 +245,7 @@ class UtilityCog(commands.Cog):
             else: await interaction.response.send_message("ვერ ვიპოვე არხი.", ephemeral=True)
         else: await interaction.response.send_message("ჯერ დააყენე არხი /set-18plus-chat.", ephemeral=True)
 
-    @tasks.loop(hours=1)
+    @tasks.loop(hours=24)
     async def send_auto_message(self):
         await self.bot.wait_until_ready(); data = load_data(AUTOMESSAGE_DB)
         for guild_id, config in data.items():
