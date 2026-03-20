@@ -3,164 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teddy-ს ტესტი - რამდენად ყლე ხარ?</title>
+    <title>ირაკლი ჭანტურიას სიმულატორი - By Teddy</title>
     <style>
         :root {
-            --primary: #ff4757;
-            --bg: #2f3542;
-            --text: #ffffff;
+            --primary: #6c5ce7;
+            --poop: #6d4c41;
+            --water: #00d2d3;
+            --food: #ff9f43;
+            --bg: #1e272e;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
             background-color: var(--bg);
-            color: var(--text);
+            color: white;
             margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            overflow-x: hidden;
             text-align: center;
-            padding: 20px;
         }
 
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        .header { padding: 20px; border-bottom: 2px solid var(--primary); width: 100%; }
+        .teddy-brand { color: #ffa502; font-weight: bold; }
+
+        .game-container {
             max-width: 500px;
-            width: 100%;
-            border: 2px solid var(--primary);
+            width: 90%;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 20px;
+            min-height: 400px;
+            position: relative;
         }
 
-        h1 { color: var(--primary); font-size: 1.8rem; }
-        .teddy-mark { font-weight: bold; color: #ffa502; text-transform: uppercase; }
-
-        .btn {
+        .menu-btn {
             background: var(--primary);
-            color: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            border-radius: 50px;
+            padding: 15px;
+            margin: 5px;
+            color: white;
+            border-radius: 10px;
             cursor: pointer;
-            margin-top: 20px;
-            transition: transform 0.2s, background 0.2s;
-            width: 100%;
+            width: 100px;
         }
 
-        .btn:hover { background: #ff6b81; transform: scale(1.05); }
+        .screen { display: none; }
+        .active { display: block; }
 
-        #question-container { display: none; }
-        #result-container { display: none; }
-
-        .q-text { font-size: 1.4rem; margin-bottom: 25px; min-height: 80px; }
-
-        footer {
-            margin-top: 20px;
-            font-size: 0.8rem;
-            opacity: 0.7;
+        /* მოჯმის თამაში */
+        #toilet { font-size: 80px; margin-top: 50px; }
+        .poop-emoji { 
+            position: absolute; 
+            font-size: 40px; 
+            transition: transform 0.5s ease-in; 
+            top: 100px;
+            left: 45%;
         }
 
-        .founder {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            font-size: 0.7rem;
-            background: var(--primary);
-            padding: 5px 10px;
-            border-radius: 5px;
+        /* დაბანის თამაში */
+        #irakli-body {
+            font-size: 100px;
+            filter: grayscale(100%) contrast(50%);
+            transition: 0.5s;
         }
+        .clean { filter: grayscale(0%) contrast(100%) !important; }
 
-        /* ანიმაცია Teddy-სთვის */
-        .floating-teddy {
-            color: #ffa502;
-            animation: float 3s ease-in-out infinite;
-            display: inline-block;
-        }
+        /* ჭამის თამაში */
+        #food-item { font-size: 60px; cursor: pointer; transition: 0.2s; }
+        #food-item:active { transform: scale(0.8); }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
+        .status { margin: 20px 0; font-weight: bold; color: #00ff00; }
+        
+        footer { margin-top: 30px; font-size: 12px; opacity: 0.5; }
     </style>
 </head>
 <body>
 
-    <div class="founder">Found by Teddy</div>
-
-    <div id="start-screen" class="container">
-        <h1>რამდენად ყლე ხარ? <br><span class="teddy-mark">By Teddy</span></h1>
-        <p>ტესტი შექმნილია <span class="floating-teddy">Teddy</span>-ს მიერ სპეციალურად შენნაირი გენიოსებისთვის.</p>
-        <button class="btn" onclick="startQuiz()">დაიწყე ტესტი</button>
+    <div class="header">
+        <h2>ირაკლი ჭანტურიას დღე</h2>
+        <p>საიტის დამფუძნებელი: <span class="teddy-brand">Teddy</span></p>
     </div>
 
-    <div id="question-container" class="container">
-        <div class="teddy-mark" style="margin-bottom: 10px;">Teddy გითვალთვალებს...</div>
-        <div class="q-text" id="question-text">კითხვა აქ გამოჩნდება</div>
-        <div id="options">
-            <button class="btn" onclick="nextQuestion()">კი</button>
-            <button class="btn" onclick="nextQuestion()">რა თქმა უნდა</button>
-            <button class="btn" onclick="nextQuestion()">Teddy-ს ვფიცავარ კი</button>
+    <div class="nav">
+        <button class="menu-btn" onclick="showScreen('poop-game')">💩 მოჯმა</button>
+        <button class="menu-btn" onclick="showScreen('wash-game')">🚿 დაბანა</button>
+        <button class="menu-btn" onclick="showScreen('eat-game')">🍔 ჭამა</button>
+    </div>
+
+    <div class="game-container">
+        
+        <div id="poop-game" class="screen active">
+            <h3>ირაკლი, მოჯმის დროა!</h3>
+            <p>ჩააგდე 5 მძღნერი უნიტაზში</p>
+            <div id="toilet">🚽</div>
+            <div id="poop-zone"></div>
+            <div class="status" id="poop-status">დარჩენილია: 5</div>
+            <button class="menu-btn" style="background:var(--poop)" onclick="dropPoop()">მიაწექი, ირაკლი!</button>
         </div>
-    </div>
 
-    <div id="result-container" class="container">
-        <h1>დიაგნოზი დასმულია!</h1>
-        <p id="final-verdict"></p>
-        <p class="teddy-mark">Powered by Teddy Intelligence</p>
-        <button class="btn" onclick="location.reload()">თავიდან დაწყება (თუ არ გეყო)</button>
+        <div id="wash-game" class="screen">
+            <h3>ირაკლი, ყარხარ! დაიბანე</h3>
+            <p>დააკლიკე ირაკლის ბევრჯერ, რომ გასუფთავდეს</p>
+            <div id="irakli-body">👨‍ინდივიდი</div>
+            <div class="status" id="wash-status">სიბინძურე: 100%</div>
+            <button class="menu-btn" style="background:var(--water)" onclick="scrubIrakli()">გახეხე</button>
+        </div>
+
+        <div id="eat-game" class="screen">
+            <h3>ირაკლი, ჭამე რამე!</h3>
+            <p>დააკლიკე საჭმელს, სანამ არ გაძღები</p>
+            <div id="food-item" onclick="eatFood()">🍔</div>
+            <div class="status" id="eat-status">შიმშილი: 100%</div>
+        </div>
+
     </div>
 
     <footer>
-        © 2024 ყველა უფლება დაცულია Teddy-ს მიერ. <br>
-        საიტის დამფუძნებელი: <b>Teddy</b>
+        Created by Teddy for Irakli Chanturia. All rights reserved 2026.
     </footer>
 
     <script>
-        const questions = [
-            "10,000 $-ის გამო მძღნერს შეჭამ?",
-            "სპერმა რო იყო თავს გაიშავებ?",
-            "ქუჩაში რომ დაინახო Elon Musk ფეხებს დაუკუცნი?",
-            "გოგო რო იყო ჩურს გააქირავებ?",
-            "და ბოლოს... მომიწოვ?"
-        ];
+        let poopCount = 5;
+        let washPercent = 100;
+        let hungerPercent = 100;
 
-        let currentQuestionIndex = 0;
-
-        function startQuiz() {
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('question-container').style.display = 'block';
-            showQuestion();
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        function showQuestion() {
-            document.getElementById('question-text').innerText = questions[currentQuestionIndex];
-        }
+        // მოჯმის ლოგიკა
+        function dropPoop() {
+            if (poopCount > 0) {
+                const zone = document.getElementById('poop-zone');
+                const p = document.createElement('div');
+                p.className = 'poop-emoji';
+                p.innerText = '💩';
+                zone.appendChild(p);
+                
+                setTimeout(() => {
+                    p.style.transform = 'translateY(150px)';
+                    p.style.opacity = '0';
+                }, 10);
 
-        function nextQuestion() {
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                showQuestion();
-            } else {
-                showResult();
+                poopCount--;
+                document.getElementById('poop-status').innerText = `დარჩენილია: ${poopCount}`;
+                
+                if (poopCount === 0) {
+                    document.getElementById('poop-status').innerText = "ყოჩაღ ირაკლი! გათავისუფლდი!";
+                    document.getElementById('toilet').innerText = '🚽✨';
+                }
             }
         }
 
-        function showResult() {
-            document.getElementById('question-container').style.display = 'none';
-            document.getElementById('result-container').style.display = 'block';
-            
-            const results = [
-                "გილოცავ! შენ 100%-ით ყლე ხარ. Teddy ამაყობს შენით!",
-                "შენ იმდენად ყლე ხარ, რომ Teddy-მ შენი სურათი კედელზე ჩამოკიდა.",
-                "გილოცავ! შენ 100%-ით ყლე ხარ. Teddy ამაყობს შენით!"
-            ];
-            
-            const randomResult = results[Math.floor(Math.random() * results.length)];
-            document.getElementById('final-verdict').innerText = randomResult;
+        // დაბანის ლოგიკა
+        function scrubIrakli() {
+            if (washPercent > 0) {
+                washPercent -= 10;
+                document.getElementById('wash-status').innerText = `სიბინძურე: ${washPercent}%`;
+                if (washPercent <= 0) {
+                    document.getElementById('irakli-body').classList.add('clean');
+                    document.getElementById('wash-status').innerText = "ირაკლი ახლა პრიალებს! Teddy კმაყოფილია.";
+                }
+            }
+        }
+
+        // ჭამის ლოგიკა
+        const foods = ['🍔', '🍕', '🍖', '🥪', '🍟'];
+        function eatFood() {
+            if (hungerPercent > 0) {
+                hungerPercent -= 20;
+                document.getElementById('food-item').innerText = foods[Math.floor(Math.random()*foods.length)];
+                document.getElementById('eat-status').innerText = `შიმშილი: ${hungerPercent}%`;
+                
+                if (hungerPercent <= 0) {
+                    document.getElementById('eat-status').innerText = "ირაკლი გასკდა ჭამით! დროა ისევ მოსაჯმელად წავიდეს.";
+                    document.getElementById('food-item').innerText = '🤮';
+                }
+            }
         }
     </script>
 </body>
