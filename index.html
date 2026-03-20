@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teddy-ს ტესტი - რამდენად ყლე ხარ?</title>
+    <style>
+        :root {
+            --primary: #ff4757;
+            --bg: #2f3542;
+            --text: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 500px;
+            width: 100%;
+            border: 2px solid var(--primary);
+        }
+
+        h1 { color: var(--primary); font-size: 1.8rem; }
+        .teddy-mark { font-weight: bold; color: #ffa502; text-transform: uppercase; }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s, background 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover { background: #ff6b81; transform: scale(1.05); }
+
+        #question-container { display: none; }
+        #result-container { display: none; }
+
+        .q-text { font-size: 1.4rem; margin-bottom: 25px; min-height: 80px; }
+
+        footer {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .founder {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7rem;
+            background: var(--primary);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        /* ანიმაცია Teddy-სთვის */
+        .floating-teddy {
+            color: #ffa502;
+            animation: float 3s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="founder">Found by Teddy</div>
+
+    <div id="start-screen" class="container">
+        <h1>რამდენად ყლე ხარ? <br><span class="teddy-mark">By Teddy</span></h1>
+        <p>ტესტი შექმნილია <span class="floating-teddy">Teddy</span>-ს მიერ სპეციალურად შენნაირი გენიოსებისთვის.</p>
+        <button class="btn" onclick="startQuiz()">დაიწყე ტესტი</button>
+    </div>
+
+    <div id="question-container" class="container">
+        <div class="teddy-mark" style="margin-bottom: 10px;">Teddy გითვალთვალებს...</div>
+        <div class="q-text" id="question-text">კითხვა აქ გამოჩნდება</div>
+        <div id="options">
+            <button class="btn" onclick="nextQuestion()">კი</button>
+            <button class="btn" onclick="nextQuestion()">რა თქმა უნდა</button>
+            <button class="btn" onclick="nextQuestion()">Teddy-ს ვფიცავარ კი</button>
+        </div>
+    </div>
+
+    <div id="result-container" class="container">
+        <h1>დიაგნოზი დასმულია!</h1>
+        <p id="final-verdict"></p>
+        <p class="teddy-mark">Powered by Teddy Intelligence</p>
+        <button class="btn" onclick="location.reload()">თავიდან დაწყება (თუ არ გეყო)</button>
+    </div>
+
+    <footer>
+        © 2024 ყველა უფლება დაცულია Teddy-ს მიერ. <br>
+        საიტის დამფუძნებელი: <b>Teddy</b>
+    </footer>
+
+    <script>
+        const questions = [
+            "10,000 $-ის გამო მძღნერს შეჭამ?",
+            "სპერმა რო იყო თავს გაიშავებ?",
+            "ქუჩაში რომ დაინახო Elon Musk ფეხებს დაუკუცნი?",
+            "გოგო რო იყო ჩურს გააქირავებ?",
+            "და ბოლოს... მომიწოვ?"
+        ];
+
+        let currentQuestionIndex = 0;
+
+        function startQuiz() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('question-container').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            document.getElementById('question-text').innerText = questions[currentQuestionIndex];
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('question-container').style.display = 'none';
+            document.getElementById('result-container').style.display = 'block';
+            
+            const results = [
+                "გილოცავ! შენ 100%-ით ყლე ხარ. Teddy ამაყობს შენით!",
+                "შენ იმდენად ყლე ხარ, რომ Teddy-მ შენი სურათი კედელზე ჩამოკიდა.",
+                "გილოცავ! შენ 100%-ით ყლე ხარ. Teddy ამაყობს შენით!"
+            ];
+            
+            const randomResult = results[Math.floor(Math.random() * results.length)];
+            document.getElementById('final-verdict').innerText = randomResult;
+        }
+    </script>
+</body>
+</html>
