@@ -1,190 +1,246 @@
 <!DOCTYPE html>
-<html lang="ka">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ირაკლი ჭანტურიას სიმულატორი - By Teddy</title>
+    <title>NorthCraft | Official Checkout</title>
     <style>
         :root {
-            --primary: #6c5ce7;
-            --poop: #6d4c41;
-            --water: #00d2d3;
-            --food: #ff9f43;
-            --bg: #1e272e;
+            --primary-gold: #ffcc00;
+            --dark-bg: #0f0f0f;
+            --card-bg: #1a1a1a;
+            --text-color: #e0e0e0;
+            --accent-blue: #00aaff;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: var(--bg);
-            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-color);
             margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 40px 0;
             text-align: center;
+            background: linear-gradient(to bottom, #1a1a1a, #0f0f0f);
+            border-bottom: 2px solid var(--primary-gold);
+            margin-bottom: 30px;
         }
 
-        .header { padding: 20px; border-bottom: 2px solid var(--primary); width: 100%; }
-        .teddy-brand { color: #ffa502; font-weight: bold; }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            letter-spacing: 3px;
+            color: var(--primary-gold);
+            text-transform: uppercase;
+        }
 
-        .game-container {
-            max-width: 500px;
-            width: 90%;
-            margin-top: 20px;
-            background: rgba(255,255,255,0.05);
+        .container {
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
             padding: 20px;
-            border-radius: 20px;
-            min-height: 400px;
-            position: relative;
+            width: 90%;
         }
 
-        .menu-btn {
-            background: var(--primary);
-            border: none;
-            padding: 15px;
-            margin: 5px;
-            color: white;
-            border-radius: 10px;
+        .staff-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #333;
             cursor: pointer;
-            width: 100px;
         }
 
-        .screen { display: none; }
-        .active { display: block; }
-
-        /* მოჯმის თამაში */
-        #toilet { font-size: 80px; margin-top: 50px; }
-        .poop-emoji { 
-            position: absolute; 
-            font-size: 40px; 
-            transition: transform 0.5s ease-in; 
-            top: 100px;
-            left: 45%;
+        .staff-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(255, 204, 0, 0.1);
+            border-color: var(--primary-gold);
         }
 
-        /* დაბანის თამაში */
-        #irakli-body {
-            font-size: 100px;
-            filter: grayscale(100%) contrast(50%);
-            transition: 0.5s;
+        .avatar {
+            width: 80px;
+            height: 80px;
+            background: #333;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid var(--accent-blue);
         }
-        .clean { filter: grayscale(0%) contrast(100%) !important; }
 
-        /* ჭამის თამაში */
-        #food-item { font-size: 60px; cursor: pointer; transition: 0.2s; }
-        #food-item:active { transform: scale(0.8); }
+        .staff-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: block;
+        }
 
-        .status { margin: 20px 0; font-weight: bold; color: #00ff00; }
-        
-        footer { margin-top: 30px; font-size: 12px; opacity: 0.5; }
+        .btn-claim {
+            background-color: var(--primary-gold);
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-claim:hover {
+            background-color: #e6b800;
+        }
+
+        /* Modal / Alert Box */
+        #notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid var(--primary-gold);
+            text-align: center;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            min-width: 300px;
+        }
+
+        #notification h2 {
+            color: var(--primary-gold);
+            margin-top: 0;
+        }
+
+        #notification button {
+            margin-top: 20px;
+            padding: 10px 25px;
+            background: var(--accent-blue);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h2>ირაკლი ჭანტურიას დღე</h2>
-        <p>საიტის დამფუძნებელი: <span class="teddy-brand">Teddy</span></p>
+<header>
+    <h1>NorthCraft Official Checkout</h1>
+    <p>Staff Payroll Management System v2.1</p>
+</header>
+
+<div class="container">
+    <div class="staff-card" onclick="processPayment('Saddler')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">†𝙎𝙖𝙙𝙙𝙡𝙚𝙧†</span>
+        <button class="btn-claim">Claim Salary</button>
     </div>
 
-    <div class="nav">
-        <button class="menu-btn" onclick="showScreen('poop-game')">💩 მოჯმა</button>
-        <button class="menu-btn" onclick="showScreen('wash-game')">🚿 დაბანა</button>
-        <button class="menu-btn" onclick="showScreen('eat-game')">🍔 ჭამა</button>
+    <div class="staff-card" onclick="processPayment('Teddy')">
+        <div class="avatar">👑</div>
+        <span class="staff-name">Teddy</span>
+        <button class="btn-claim">Claim Salary</button>
     </div>
 
-    <div class="game-container">
+    <div class="staff-card" onclick="processPayment('Yama')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">Yama</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Redex550')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">Redex550</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Tokiomon')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">Tokiomon</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Miqa')">
+        <div class="avatar">⚔️</div>
+        <span class="staff-name">Miqa</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Uncle')">
+        <div class="avatar">🔱</div>
+        <span class="staff-name">Uncle</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div id="notification">
+    <h2 id="modalTitle">Transaction Details</h2>
+    <p id="modalMessage"></p>
+    <button onclick="closeModal()">Close</button>
+</div>
+
+<script>
+    function processPayment(name) {
+        const modal = document.getElementById('notification');
+        const overlay = document.getElementById('overlay');
+        const message = document.getElementById('modalMessage');
+        const title = document.getElementById('modalTitle');
+
+        let output = "";
         
-        <div id="poop-game" class="screen active">
-            <h3>ირაკლი, მოჯმის დროა!</h3>
-            <p>ჩააგდე 5 მძღნერი უნიტაზში</p>
-            <div id="toilet">🚽</div>
-            <div id="poop-zone"></div>
-            <div class="status" id="poop-status">დარჩენილია: 5</div>
-            <button class="menu-btn" style="background:var(--poop)" onclick="dropPoop()">მიაწექი, ირაკლი!</button>
-        </div>
-
-        <div id="wash-game" class="screen">
-            <h3>ირაკლი, ყარხარ! დაიბანე</h3>
-            <p>დააკლიკე ირაკლის ბევრჯერ, რომ გასუფთავდეს</p>
-            <div id="irakli-body">👨‍ინდივიდი</div>
-            <div class="status" id="wash-status">სიბინძურე: 100%</div>
-            <button class="menu-btn" style="background:var(--water)" onclick="scrubIrakli()">გახეხე</button>
-        </div>
-
-        <div id="eat-game" class="screen">
-            <h3>ირაკლი, ჭამე რამე!</h3>
-            <p>დააკლიკე საჭმელს, სანამ არ გაძღები</p>
-            <div id="food-item" onclick="eatFood()">🍔</div>
-            <div class="status" id="eat-status">შიმშილი: 100%</div>
-        </div>
-
-    </div>
-
-    <footer>
-        Created by Teddy for Irakli Chanturia. All rights reserved 2026.
-    </footer>
-
-    <script>
-        let poopCount = 5;
-        let washPercent = 100;
-        let hungerPercent = 100;
-
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+        // Logic for specific staff
+        if (name === 'Saddler') {
+            output = "თქვენ დაგერიცხათ ხელფასი 220.20 ლარი ! ანგარიშზე ნომრით - Sdlr432";
+        } 
+        else if (['Teddy', 'Yama', 'Redex550', 'Tokiomon'].includes(name)) {
+            output = "თქვენი ხელფასი/პრემია აღებულია Teddy - ს მიერ";
+        } 
+        else if (name === 'Uncle') {
+            output = "Uncle-ს ნასკი გადაუხადეთ ხელფასად!";
+            title.innerText = "Special Notice";
+        } 
+        else {
+            // Random salary for others (e.g., Miqa)
+            const randomSalary = (Math.random() * (1000 - 200) + 200).toFixed(2);
+            output = `თქვენ დაგერიცხათ ხელფასი ${randomSalary} ლარი ! ანგარიშზე ნომრით - NC-${Math.floor(Math.random() * 10000)}`;
         }
 
-        // მოჯმის ლოგიკა
-        function dropPoop() {
-            if (poopCount > 0) {
-                const zone = document.getElementById('poop-zone');
-                const p = document.createElement('div');
-                p.className = 'poop-emoji';
-                p.innerText = '💩';
-                zone.appendChild(p);
-                
-                setTimeout(() => {
-                    p.style.transform = 'translateY(150px)';
-                    p.style.opacity = '0';
-                }, 10);
+        message.innerText = output;
+        modal.style.display = 'block';
+        overlay.style.display = 'block';
+    }
 
-                poopCount--;
-                document.getElementById('poop-status').innerText = `დარჩენილია: ${poopCount}`;
-                
-                if (poopCount === 0) {
-                    document.getElementById('poop-status').innerText = "ყოჩაღ ირაკლი! გათავისუფლდი!";
-                    document.getElementById('toilet').innerText = '🚽✨';
-                }
-            }
-        }
+    function closeModal() {
+        document.getElementById('notification').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('modalTitle').innerText = "Transaction Details";
+    }
+</script>
 
-        // დაბანის ლოგიკა
-        function scrubIrakli() {
-            if (washPercent > 0) {
-                washPercent -= 10;
-                document.getElementById('wash-status').innerText = `სიბინძურე: ${washPercent}%`;
-                if (washPercent <= 0) {
-                    document.getElementById('irakli-body').classList.add('clean');
-                    document.getElementById('wash-status').innerText = "ირაკლი ახლა პრიალებს! Teddy კმაყოფილია.";
-                }
-            }
-        }
-
-        // ჭამის ლოგიკა
-        const foods = ['🍔', '🍕', '🍖', '🥪', '🍟'];
-        function eatFood() {
-            if (hungerPercent > 0) {
-                hungerPercent -= 20;
-                document.getElementById('food-item').innerText = foods[Math.floor(Math.random()*foods.length)];
-                document.getElementById('eat-status').innerText = `შიმშილი: ${hungerPercent}%`;
-                
-                if (hungerPercent <= 0) {
-                    document.getElementById('eat-status').innerText = "ირაკლი გასკდა ჭამით! დროა ისევ მოსაჯმელად წავიდეს.";
-                    document.getElementById('food-item').innerText = '🤮';
-                }
-            }
-        }
-    </script>
 </body>
 </html>
