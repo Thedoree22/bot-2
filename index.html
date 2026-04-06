@@ -11,6 +11,7 @@
             --card-bg: #1a1a1a;
             --text-color: #e0e0e0;
             --accent-blue: #00aaff;
+            --error-red: #ff4444;
         }
 
         body {
@@ -44,10 +45,10 @@
         .container {
             max-width: 1200px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
             padding: 20px;
-            width: 90%;
+            width: 95%;
         }
 
         .staff-card {
@@ -58,6 +59,7 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border: 1px solid #333;
             cursor: pointer;
+            position: relative;
         }
 
         .staff-card:hover {
@@ -69,32 +71,35 @@
         .avatar {
             width: 80px;
             height: 80px;
-            background: #333;
+            background: #252525;
             border-radius: 50%;
             margin: 0 auto 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 1.8rem;
             border: 2px solid var(--accent-blue);
+            overflow: hidden;
         }
 
         .staff-name {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: bold;
             margin-bottom: 15px;
             display: block;
+            white-space: nowrap;
         }
 
         .btn-claim {
             background-color: var(--primary-gold);
             color: black;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 5px;
             font-weight: bold;
             text-transform: uppercase;
             cursor: pointer;
+            width: 100%;
             transition: background 0.2s;
         }
 
@@ -115,13 +120,22 @@
             text-align: center;
             z-index: 1000;
             display: none;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            min-width: 300px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            min-width: 320px;
         }
 
         #notification h2 {
             color: var(--primary-gold);
             margin-top: 0;
+            text-transform: uppercase;
+        }
+
+        #notification.error-border {
+            border-color: var(--error-red);
+        }
+
+        #notification.error-border h2 {
+            color: var(--error-red);
         }
 
         #notification button {
@@ -132,6 +146,7 @@
             color: white;
             border-radius: 5px;
             cursor: pointer;
+            font-weight: bold;
         }
 
         .overlay {
@@ -140,7 +155,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             display: none;
             z-index: 999;
         }
@@ -150,10 +165,34 @@
 
 <header>
     <h1>NorthCraft Official Checkout</h1>
-    <p>Staff Payroll Management System v2.1</p>
+    <p>Staff Payroll & Bonus Distribution System</p>
 </header>
 
 <div class="container">
+    <div class="staff-card" onclick="processPayment('Lil Tanjiro')">
+        <div class="avatar">👺</div>
+        <span class="staff-name">Lil Tanjiro</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Miqa')">
+        <div class="avatar">⚔️</div>
+        <span class="staff-name">Miqa</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Yama')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">Yama</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Redex570')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">Redex570</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
     <div class="staff-card" onclick="processPayment('Saddler')">
         <div class="avatar">👤</div>
         <span class="staff-name">†𝙎𝙖𝙙𝙙𝙡𝙚𝙧†</span>
@@ -166,27 +205,9 @@
         <button class="btn-claim">Claim Salary</button>
     </div>
 
-    <div class="staff-card" onclick="processPayment('Yama')">
-        <div class="avatar">👤</div>
-        <span class="staff-name">Yama</span>
-        <button class="btn-claim">Claim Salary</button>
-    </div>
-
-    <div class="staff-card" onclick="processPayment('Redex550')">
-        <div class="avatar">👤</div>
-        <span class="staff-name">Redex550</span>
-        <button class="btn-claim">Claim Salary</button>
-    </div>
-
     <div class="staff-card" onclick="processPayment('Tokiomon')">
         <div class="avatar">👤</div>
         <span class="staff-name">Tokiomon</span>
-        <button class="btn-claim">Claim Salary</button>
-    </div>
-
-    <div class="staff-card" onclick="processPayment('Miqa')">
-        <div class="avatar">⚔️</div>
-        <span class="staff-name">Miqa</span>
         <button class="btn-claim">Claim Salary</button>
     </div>
 
@@ -211,21 +232,28 @@
         const message = document.getElementById('modalMessage');
         const title = document.getElementById('modalTitle');
 
+        // Reset classes
+        modal.classList.remove('error-border');
+        title.innerText = "Transaction Details";
+
         let output = "";
         
-        // Logic for specific staff
-        if (name === 'Saddler') {
+        if (name === 'Lil Tanjiro') {
+            output = "Error: აღნიშნული პირი არ არის 8+ ამიტომ ხელფასი დაერიცხა მენეჯერს";
+            title.innerText = "Access Denied";
+            modal.classList.add('error-border');
+        }
+        else if (name === 'Saddler') {
             output = "თქვენ დაგერიცხათ ხელფასი 220.20 ლარი ! ანგარიშზე ნომრით - Sdlr432";
         } 
-        else if (['Teddy', 'Yama', 'Redex550', 'Tokiomon'].includes(name)) {
-            output = "თქვენი ხელფასი/პრემია აღებულია Teddy - ს მიერ";
+        else if (['Teddy', 'Yama', 'Redex570', 'Tokiomon'].includes(name)) {
+            output = `თქვენი ხელფასი/პრემია აღებულია Teddy - ს მიერ`;
         } 
         else if (name === 'Uncle') {
             output = "Uncle-ს ნასკი გადაუხადეთ ხელფასად!";
-            title.innerText = "Special Notice";
+            title.innerText = "Bonus Info";
         } 
         else {
-            // Random salary for others (e.g., Miqa)
             const randomSalary = (Math.random() * (1000 - 200) + 200).toFixed(2);
             output = `თქვენ დაგერიცხათ ხელფასი ${randomSalary} ლარი ! ანგარიშზე ნომრით - NC-${Math.floor(Math.random() * 10000)}`;
         }
@@ -238,7 +266,6 @@
     function closeModal() {
         document.getElementById('notification').style.display = 'none';
         document.getElementById('overlay').style.display = 'none';
-        document.getElementById('modalTitle').innerText = "Transaction Details";
     }
 </script>
 
