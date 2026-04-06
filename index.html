@@ -165,9 +165,15 @@
         <button class="btn-claim">Claim Salary</button>
     </div>
 
-    <div class="staff-card" onclick="processPayment('Miqa')">
-        <div class="avatar">⚔️</div>
-        <span class="staff-name">Miqa</span>
+    <div class="staff-card" onclick="processPayment('Saddler')">
+        <div class="avatar">👤</div>
+        <span class="staff-name">†𝙎𝙖𝙙𝙙𝙡𝙚𝙧†</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Teddy')">
+        <div class="avatar">👑</div>
+        <span class="staff-name">Teddy</span>
         <button class="btn-claim">Claim Salary</button>
     </div>
 
@@ -183,21 +189,15 @@
         <button class="btn-claim">Claim Salary</button>
     </div>
 
-    <div class="staff-card" onclick="processPayment('Saddler')">
-        <div class="avatar">👤</div>
-        <span class="staff-name">†𝙎𝙖𝙙𝙙𝙡𝙚𝙧†</span>
-        <button class="btn-claim">Claim Salary</button>
-    </div>
-
-    <div class="staff-card" onclick="processPayment('Teddy')">
-        <div class="avatar">👑</div>
-        <span class="staff-name">Teddy</span>
-        <button class="btn-claim">Claim Salary</button>
-    </div>
-
     <div class="staff-card" onclick="processPayment('Tokiomon')">
         <div class="avatar">👤</div>
         <span class="staff-name">Tokiomon</span>
+        <button class="btn-claim">Claim Salary</button>
+    </div>
+
+    <div class="staff-card" onclick="processPayment('Miqa')">
+        <div class="avatar">⚔️</div>
+        <span class="staff-name">Miqa</span>
         <button class="btn-claim">Claim Salary</button>
     </div>
 
@@ -222,7 +222,6 @@
         const message = document.getElementById('modalMessage');
         const title = document.getElementById('modalTitle');
 
-        // Reset Styles
         modal.classList.remove('error-mode');
         title.innerText = "Transaction Details";
 
@@ -241,7 +240,7 @@
         } 
         else if (name === 'Uncle') {
             output = "Uncle-ს ნასკი გადაუხადეთ ხელფასად!";
-            title.innerText = "Payment Notice";
+            title.innerText = "Bonus Information";
         } 
         else {
             const randomSalary = (Math.random() * (1000 - 200) + 200).toFixed(2);
