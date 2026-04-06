@@ -59,12 +59,11 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border: 1px solid #333;
             cursor: pointer;
-            position: relative;
         }
 
         .staff-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 10px 20px rgba(255, 204, 0, 0.1);
+            box-shadow: 0 10px 20px rgba(255, 204, 0, 0.2);
             border-color: var(--primary-gold);
         }
 
@@ -79,7 +78,6 @@
             justify-content: center;
             font-size: 1.8rem;
             border: 2px solid var(--accent-blue);
-            overflow: hidden;
         }
 
         .staff-name {
@@ -87,7 +85,6 @@
             font-weight: bold;
             margin-bottom: 15px;
             display: block;
-            white-space: nowrap;
         }
 
         .btn-claim {
@@ -100,11 +97,6 @@
             text-transform: uppercase;
             cursor: pointer;
             width: 100%;
-            transition: background 0.2s;
-        }
-
-        .btn-claim:hover {
-            background-color: #e6b800;
         }
 
         /* Modal / Alert Box */
@@ -124,18 +116,17 @@
             min-width: 320px;
         }
 
-        #notification h2 {
-            color: var(--primary-gold);
-            margin-top: 0;
-            text-transform: uppercase;
-        }
-
-        #notification.error-border {
+        #notification.error-mode {
             border-color: var(--error-red);
         }
 
-        #notification.error-border h2 {
+        #notification.error-mode h2 {
             color: var(--error-red);
+        }
+
+        #notification h2 {
+            color: var(--primary-gold);
+            margin-top: 0;
         }
 
         #notification button {
@@ -146,7 +137,6 @@
             color: white;
             border-radius: 5px;
             cursor: pointer;
-            font-weight: bold;
         }
 
         .overlay {
@@ -232,26 +222,26 @@
         const message = document.getElementById('modalMessage');
         const title = document.getElementById('modalTitle');
 
-        // Reset classes
-        modal.classList.remove('error-border');
+        // Reset Styles
+        modal.classList.remove('error-mode');
         title.innerText = "Transaction Details";
 
         let output = "";
         
         if (name === 'Lil Tanjiro') {
             output = "Error: აღნიშნული პირი არ არის 8+ ამიტომ ხელფასი დაერიცხა მენეჯერს";
-            title.innerText = "Access Denied";
-            modal.classList.add('error-border');
+            title.innerText = "System Error";
+            modal.classList.add('error-mode');
         }
         else if (name === 'Saddler') {
             output = "თქვენ დაგერიცხათ ხელფასი 220.20 ლარი ! ანგარიშზე ნომრით - Sdlr432";
         } 
         else if (['Teddy', 'Yama', 'Redex570', 'Tokiomon'].includes(name)) {
-            output = `თქვენი ხელფასი/პრემია აღებულია Teddy - ს მიერ`;
+            output = "თქვენი ხელფასი/პრემია აღებულია Teddy - ს მიერ";
         } 
         else if (name === 'Uncle') {
             output = "Uncle-ს ნასკი გადაუხადეთ ხელფასად!";
-            title.innerText = "Bonus Info";
+            title.innerText = "Payment Notice";
         } 
         else {
             const randomSalary = (Math.random() * (1000 - 200) + 200).toFixed(2);
